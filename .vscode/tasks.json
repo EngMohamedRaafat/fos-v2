@@ -5,7 +5,7 @@
       "label": "build",
       "detail": "Compile and Run FOS",
       "type": "shell",
-      "command": "make qemu",
+      "command": "make -bmik qemu",
       "group": {
         "kind": "build",
         "isDefault": true
@@ -15,7 +15,7 @@
       "label": "build-debug",
       "detail": "Compile and Run FOS in debug mode",
       "type": "shell",
-      "command": "make qemu-gdb",
+      "command": "make -bmik qemu-gdb",
       "isBackground": true,
       "problemMatcher": {
         "pattern": [
@@ -37,7 +37,7 @@
       "label": "clean",
       "detail": "Clean build files",
       "type": "shell",
-      "command": "make clean",
+      "command": "make -bmik clean",
       "problemMatcher": []
     }
   ]
