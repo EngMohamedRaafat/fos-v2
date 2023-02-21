@@ -19,18 +19,17 @@ FUNCTIONS:	to_physical_address, get_frame_info, tlb_invalidate
 #include <kern/kclock.h>
 #include <kern/user_environment.h>
 
-extern uint32 number_of_frames;	// Amount of physical memory (in frames_info)
+extern uint32 number_of_frames;		// Amount of physical memory (in frames_info)
 extern uint32 size_of_base_mem;		// Amount of base memory (in bytes)
-extern uint32 size_of_extended_mem;		// Amount of extended memory (in bytes)
+extern uint32 size_of_extended_mem; // Amount of extended memory (in bytes)
 
 // These variables are set in initialize_kernel_VM()
-uint32* ptr_page_directory;		// Virtual address of boot time page directory
-uint32 phys_page_directory;		// Physical address of boot time page directory
-char* ptr_free_mem;	// Pointer to next byte of free mem
+uint32 *ptr_page_directory; // Virtual address of boot time page directory
+uint32 phys_page_directory; // Physical address of boot time page directory
+char *ptr_free_mem;			// Pointer to next byte of free mem
 
-struct Frame_Info* frames_info;		// Virtual address of physical frames_info array
-struct Linked_List free_frame_list;	// Free list of physical frames_info
-
+struct Frame_Info *frames_info;		// Virtual address of physical frames_info array
+struct Linked_List free_frame_list; // Free list of physical frames_info
 
 //==================== MAPPING KERNEL SPACE ==============================
 
@@ -39,7 +38,7 @@ struct Linked_List free_frame_list;	// Free list of physical frames_info
 //    phys_page_directory is the physical adresss of the page directory
 // Then turn on paging.  Then effectively turn off segmentation.
 // (i.e., the segment base addrs are set to zero).
-// 
+//
 // This function only sets up the kernel part of the address space
 // (ie. addresses >= USER_TOP).  The user part of the address space
 // will be setup later.
@@ -50,7 +49,7 @@ struct Linked_List free_frame_list;	// Free list of physical frames_info
 void initialize_kernel_VM()
 {
 	// Remove this line when you're ready to test this function.
-	//panic("initialize_kernel_VM: This function is not finished\n");
+	// panic("initialize_kernel_VM: This function is not finished\n");
 
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
@@ -61,11 +60,11 @@ void initialize_kernel_VM()
 
 	//////////////////////////////////////////////////////////////////////
 	// Map the kernel stack with VA range :
-	//  [KERNEL_STACK_TOP-KERNEL_STACK_SIZE, KERNEL_STACK_TOP), 
+	//  [KERNEL_STACK_TOP-KERNEL_STACK_SIZE, KERNEL_STACK_TOP),
 	// to physical address : "phys_stack_bottom".
 	//     Permissions: kernel RW, user NONE
 	// Your code goes here:
-	boot_map_range(ptr_page_directory, KERNEL_STACK_TOP - KERNEL_STACK_SIZE, KERNEL_STACK_SIZE, K_PHYSICAL_ADDRESS(ptr_stack_bottom), PERM_WRITEABLE) ;
+	boot_map_range(ptr_page_directory, KERNEL_STACK_TOP - KERNEL_STACK_SIZE, KERNEL_STACK_SIZE, K_PHYSICAL_ADDRESS(ptr_stack_bottom), PERM_WRITEABLE);
 
 	//////////////////////////////////////////////////////////////////////
 	// Map all of physical memory at KERNEL_BASE.
@@ -74,8 +73,8 @@ void initialize_kernel_VM()
 	// We might not have 2^32 - KERNEL_BASE bytes of physical memory, but
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
-	// Your code goes here: 
-	boot_map_range(ptr_page_directory, KERNEL_BASE, 0xFFFFFFFF - KERNEL_BASE, 0, PERM_WRITEABLE) ;
+	// Your code goes here:
+	boot_map_range(ptr_page_directory, KERNEL_BASE, 0xFFFFFFFF - KERNEL_BASE, 0, PERM_WRITEABLE);
 
 	//////////////////////////////////////////////////////////////////////
 	// Make 'frames_info' point to an array of size 'number_of_frames' of 'struct Frame_Info'.
@@ -90,10 +89,9 @@ void initialize_kernel_VM()
 	//    - the image mapped at READ_ONLY_FRAMES_INFO  -- kernel R, user R
 	// Your code goes here:
 	uint32 array_size;
-	array_size = number_of_frames * sizeof(struct Frame_Info) ;
+	array_size = number_of_frames * sizeof(struct Frame_Info);
 	frames_info = boot_allocate_space(array_size, PAGE_SIZE);
-	boot_map_range(ptr_page_directory, READ_ONLY_FRAMES_INFO, array_size, K_PHYSICAL_ADDRESS(frames_info), PERM_USER) ;
-
+	boot_map_range(ptr_page_directory, READ_ONLY_FRAMES_INFO, array_size, K_PHYSICAL_ADDRESS(frames_info), PERM_USER);
 
 	// This allows the kernel & user to access any page table entry using a
 	// specified VA for each: VPT for kernel and UVPT for User.
@@ -108,24 +106,23 @@ void initialize_kernel_VM()
 	//    - the image of envs mapped at UENVS  -- kernel R, user R
 
 	// LAB 3: Your code here.
-	int envs_size = NENV * sizeof(struct Env) ;
+	int envs_size = NENV * sizeof(struct Env);
 
-	//allocate space for "envs" array aligned on 4KB boundary
+	// allocate space for "envs" array aligned on 4KB boundary
 	envs = boot_allocate_space(envs_size, PAGE_SIZE);
 
-	//make the user to access this array by mapping it to UPAGES linear address (UPAGES is in User/Kernel space)
-	boot_map_range(ptr_page_directory, UENVS, envs_size, K_PHYSICAL_ADDRESS(envs), PERM_USER) ;
+	// make the user to access this array by mapping it to UPAGES linear address (UPAGES is in User/Kernel space)
+	boot_map_range(ptr_page_directory, UENVS, envs_size, K_PHYSICAL_ADDRESS(envs), PERM_USER);
 
-	//update permissions of the corresponding entry in page directory to make it USER with PERMISSION read only
-	ptr_page_directory[PDX(UENVS)] = ptr_page_directory[PDX(UENVS)]|(PERM_USER|(PERM_PRESENT & (~PERM_WRITEABLE)));
-
+	// update permissions of the corresponding entry in page directory to make it USER with PERMISSION read only
+	ptr_page_directory[PDX(UENVS)] = ptr_page_directory[PDX(UENVS)] | (PERM_USER | (PERM_PRESENT & (~PERM_WRITEABLE)));
 
 	// Check that the initial page directory has been set up correctly.
 	check_boot_pgdir();
 
 	// NOW: Turn off the segmentation by setting the segments' base to 0, and
 	// turn on the paging by setting the corresponding flags in control register 0 (cr0)
-	turn_on_paging() ;
+	turn_on_paging();
 }
 
 //
@@ -138,10 +135,10 @@ void initialize_kernel_VM()
 // It's too early to run out of memory.
 // This function may ONLY be used during boot time,
 // before the free_frame_list has been set up.
-// 
-void* boot_allocate_space(uint32 size, uint32 align)
-		{
-	extern char end_of_kernel[];	
+//
+void *boot_allocate_space(uint32 size, uint32 align)
+{
+	extern char end_of_kernel[];
 
 	// Initialize ptr_free_mem if this is the first time.
 	// 'end_of_kernel' is a symbol automatically generated by the linker,
@@ -153,19 +150,18 @@ void* boot_allocate_space(uint32 size, uint32 align)
 
 	// Your code here:
 	//	Step 1: round ptr_free_mem up to be aligned properly
-	ptr_free_mem = ROUNDUP(ptr_free_mem, PAGE_SIZE) ;
+	ptr_free_mem = ROUNDUP(ptr_free_mem, PAGE_SIZE);
 
 	//	Step 2: save current value of ptr_free_mem as allocated space
 	void *ptr_allocated_mem;
-	ptr_allocated_mem = ptr_free_mem ;
+	ptr_allocated_mem = ptr_free_mem;
 
 	//	Step 3: increase ptr_free_mem to record allocation
-	ptr_free_mem += size ;
+	ptr_free_mem += size;
 
 	//	Step 4: return allocated space
-	return ptr_allocated_mem ;
-
-		}
+	return ptr_allocated_mem;
+}
 
 //
 // Map [virtual_address, virtual_address+size) of virtual address space to
@@ -179,15 +175,15 @@ void* boot_allocate_space(uint32 size, uint32 align)
 //
 void boot_map_range(uint32 *ptr_page_directory, uint32 virtual_address, uint32 size, uint32 physical_address, int perm)
 {
-	int i = 0 ;
-	physical_address = ROUNDUP(physical_address, PAGE_SIZE) ;
-	for (i = 0 ; i < size ; i += PAGE_SIZE)
+	int i = 0;
+	physical_address = ROUNDUP(physical_address, PAGE_SIZE);
+	for (i = 0; i < size; i += PAGE_SIZE)
 	{
-		uint32 *ptr_page_table = boot_get_page_table(ptr_page_directory, virtual_address, 1) ;
+		uint32 *ptr_page_table = boot_get_page_table(ptr_page_directory, virtual_address, 1);
 		uint32 index_page_table = PTX(virtual_address);
-		ptr_page_table[index_page_table] = CONSTRUCT_ENTRY(physical_address, perm | PERM_PRESENT) ;
-		physical_address += PAGE_SIZE ;
-		virtual_address += PAGE_SIZE ;
+		ptr_page_table[index_page_table] = CONSTRUCT_ENTRY(physical_address, perm | PERM_PRESENT);
+		physical_address += PAGE_SIZE;
+		virtual_address += PAGE_SIZE;
 	}
 }
 
@@ -205,13 +201,13 @@ void boot_map_range(uint32 *ptr_page_directory, uint32 virtual_address, uint32 s
 //	  And what permissions should the new ptr_page_directory entry have?)
 //
 // This function allocates new page tables as needed.
-// 
+//
 // boot_get_page_table cannot fail.  It's too early to fail.
 // This function may ONLY be used during boot time,
 // before the free_frame_list has been set up.
 //
-uint32* boot_get_page_table(uint32 *ptr_page_directory, uint32 virtual_address, int create)
-		{
+uint32 *boot_get_page_table(uint32 *ptr_page_directory, uint32 virtual_address, int create)
+{
 	uint32 index_page_directory = PDX(virtual_address);
 	uint32 page_directory_entry = ptr_page_directory[index_page_directory];
 
@@ -221,21 +217,18 @@ uint32* boot_get_page_table(uint32 *ptr_page_directory, uint32 virtual_address, 
 	{
 		if (create)
 		{
-			ptr_page_table = boot_allocate_space(PAGE_SIZE, PAGE_SIZE) ;
+			ptr_page_table = boot_allocate_space(PAGE_SIZE, PAGE_SIZE);
 			phys_page_table = K_PHYSICAL_ADDRESS(ptr_page_table);
 			ptr_page_directory[index_page_directory] = CONSTRUCT_ENTRY(phys_page_table, PERM_PRESENT | PERM_WRITEABLE);
-			return ptr_page_table ;
+			return ptr_page_table;
 		}
 		else
-			return 0 ;
+			return 0;
 	}
-	return ptr_page_table ;
-		}
+	return ptr_page_table;
+}
 
 //==================== END of MAPPING KERNEL SPACE ==============================
-
-
-
 
 //========================== MAPPING USER SPACE ==============================
 
@@ -259,7 +252,7 @@ void initialize_paging()
 	//     in case we ever need them.  (Currently we don't, but...)
 	//  2) Mark the rest of base memory as free.
 	//  3) Then comes the IO hole [PHYS_IO_MEM, PHYS_EXTENDED_MEM).
-	//     Mark it as in use so that it can never be allocated.      
+	//     Mark it as in use so that it can never be allocated.
 	//  4) Then extended memory [PHYS_EXTENDED_MEM, ...).
 	//     Some of it is in use, some is free. Where is the kernel?
 	//     Which frames are used for page tables and other data structures?
@@ -270,27 +263,27 @@ void initialize_paging()
 
 	frames_info[0].references = 1;
 
-	int range_end = ROUNDUP(PHYS_IO_MEM,PAGE_SIZE);
+	int range_end = ROUNDUP(PHYS_IO_MEM, PAGE_SIZE);
 
-	for (i = 1; i < range_end/PAGE_SIZE; i++)
+	for (i = 1; i < range_end / PAGE_SIZE; i++)
 	{
 		frames_info[i].references = 0;
 		LIST_INSERT_HEAD(&free_frame_list, &frames_info[i]);
 	}
 
-	for (i = PHYS_IO_MEM/PAGE_SIZE ; i < PHYS_EXTENDED_MEM/PAGE_SIZE; i++)
+	for (i = PHYS_IO_MEM / PAGE_SIZE; i < PHYS_EXTENDED_MEM / PAGE_SIZE; i++)
 	{
 		frames_info[i].references = 1;
 	}
 
 	range_end = ROUNDUP(K_PHYSICAL_ADDRESS(ptr_free_mem), PAGE_SIZE);
 
-	for (i = PHYS_EXTENDED_MEM/PAGE_SIZE ; i < range_end/PAGE_SIZE; i++)
+	for (i = PHYS_EXTENDED_MEM / PAGE_SIZE; i < range_end / PAGE_SIZE; i++)
 	{
 		frames_info[i].references = 1;
 	}
 
-	for (i = range_end/PAGE_SIZE ; i < number_of_frames; i++)
+	for (i = range_end / PAGE_SIZE; i < number_of_frames; i++)
 	{
 		frames_info[i].references = 0;
 		LIST_INSERT_HEAD(&free_frame_list, &frames_info[i]);
@@ -315,7 +308,7 @@ void initialize_frame_info(struct Frame_Info *ptr_frame_info)
 // *ptr_frame_info -- is set to point to the Frame_Info struct of the
 // newly allocated frame
 //
-// RETURNS 
+// RETURNS
 //   0 -- on success
 //   E_NO_MEM -- otherwise
 //
@@ -323,9 +316,9 @@ void initialize_frame_info(struct Frame_Info *ptr_frame_info)
 // Hint: references should not be incremented
 int allocate_frame(struct Frame_Info **ptr_frame_info)
 {
-	// Fill this function in	
+	// Fill this function in
 	*ptr_frame_info = LIST_FIRST(&free_frame_list);
-	if(*ptr_frame_info == NULL)
+	if (*ptr_frame_info == NULL)
 		return E_NO_MEM;
 
 	LIST_REMOVE(*ptr_frame_info);
@@ -347,7 +340,7 @@ void free_frame(struct Frame_Info *ptr_frame_info)
 // Decrement the reference count on a frame
 // freeing it if there are no more references.
 //
-void decrement_references(struct Frame_Info* ptr_frame_info)
+void decrement_references(struct Frame_Info *ptr_frame_info)
 {
 	if (--(ptr_frame_info->references) == 0)
 		free_frame(ptr_frame_info);
@@ -361,38 +354,38 @@ void decrement_references(struct Frame_Info* ptr_frame_info)
 //
 // Stores address of page table entry in *ptr_page_table .
 // Stores 0 if there is no such entry or on error.
-// 
-// RETURNS: 
+//
+// RETURNS:
 //   0 on success
 //   E_NO_MEM, if page table couldn't be allocated
 //
 // Hint: you can use "to_physical_address()" to turn a Frame_Info*
-// into the physical address of the frame it refers to. 
+// into the physical address of the frame it refers to.
 
 int get_page_table(uint32 *ptr_page_directory, const void *virtual_address, int create, uint32 **ptr_page_table)
 {
 	// Fill this function in
 	uint32 page_directory_entry = ptr_page_directory[PDX(virtual_address)];
 
-	*ptr_page_table = K_VIRTUAL_ADDRESS(EXTRACT_ADDRESS(page_directory_entry)) ;
+	*ptr_page_table = K_VIRTUAL_ADDRESS(EXTRACT_ADDRESS(page_directory_entry));
 
 	if (page_directory_entry == 0)
 	{
 		if (create)
 		{
-			struct Frame_Info* ptr_frame_info;
-			int err = allocate_frame(&ptr_frame_info) ;
-			if(err == E_NO_MEM)
+			struct Frame_Info *ptr_frame_info;
+			int err = allocate_frame(&ptr_frame_info);
+			if (err == E_NO_MEM)
 			{
 				*ptr_page_table = 0;
 				return E_NO_MEM;
 			}
 
 			uint32 phys_page_table = to_physical_address(ptr_frame_info);
-			*ptr_page_table = K_VIRTUAL_ADDRESS(phys_page_table) ;
+			*ptr_page_table = K_VIRTUAL_ADDRESS(phys_page_table);
 
-			//initialize new page table by 0's
-			memset(*ptr_page_table , 0, PAGE_SIZE);
+			// initialize new page table by 0's
+			memset(*ptr_page_table, 0, PAGE_SIZE);
 
 			ptr_frame_info->references = 1;
 			ptr_page_directory[PDX(virtual_address)] = CONSTRUCT_ENTRY(phys_page_table, PERM_PRESENT | PERM_USER | PERM_WRITEABLE);
@@ -402,7 +395,7 @@ int get_page_table(uint32 *ptr_page_directory, const void *virtual_address, int 
 			*ptr_page_table = 0;
 			return 0;
 		}
-	}	
+	}
 	return 0;
 }
 
@@ -417,7 +410,7 @@ int get_page_table(uint32 *ptr_page_directory, const void *virtual_address, int 
 //   - If necesary, on demand, allocates a page table and inserts it into 'ptr_page_directory'.
 //   - ptr_frame_info->references should be incremented if the insertion succeeds
 //
-// RETURNS: 
+// RETURNS:
 //   0 on success
 //   E_NO_MEM, if page table couldn't be allocated
 //
@@ -428,25 +421,25 @@ int map_frame(uint32 *ptr_page_directory, struct Frame_Info *ptr_frame_info, voi
 	// Fill this function in
 	uint32 physical_address = to_physical_address(ptr_frame_info);
 	uint32 *ptr_page_table;
-	if( get_page_table(ptr_page_directory, virtual_address, 1, &ptr_page_table) == 0)
+	if (get_page_table(ptr_page_directory, virtual_address, 1, &ptr_page_table) == 0)
 	{
 		uint32 page_table_entry = ptr_page_table[PTX(virtual_address)];
 
-		//If already mapped
+		// If already mapped
 		if ((page_table_entry & PERM_PRESENT) == PERM_PRESENT)
 		{
-			//on this pa, then do nothing
+			// on this pa, then do nothing
 			if (EXTRACT_ADDRESS(page_table_entry) == physical_address)
 				return 0;
-			//on another pa, then unmap it
+			// on another pa, then unmap it
 			else
-				unmap_frame(ptr_page_directory , virtual_address);
+				unmap_frame(ptr_page_directory, virtual_address);
 		}
 		ptr_frame_info->references++;
-		ptr_page_table[PTX(virtual_address)] = CONSTRUCT_ENTRY(physical_address , perm | PERM_PRESENT);
+		ptr_page_table[PTX(virtual_address)] = CONSTRUCT_ENTRY(physical_address, perm | PERM_PRESENT);
 
 		return 0;
-	}	
+	}
 	return E_NO_MEM;
 }
 
@@ -460,20 +453,20 @@ int map_frame(uint32 *ptr_page_directory, struct Frame_Info *ptr_frame_info, voi
 //
 // Hint: implement using get_page_table() and get_frame_info().
 //
-struct Frame_Info * get_frame_info(uint32 *ptr_page_directory, void *virtual_address, uint32 **ptr_page_table)
-		{
-	// Fill this function in	
-	uint32 ret =  get_page_table(ptr_page_directory, virtual_address, 0, ptr_page_table) ;
-	if((*ptr_page_table) != 0)
-	{	
+struct Frame_Info *get_frame_info(uint32 *ptr_page_directory, void *virtual_address, uint32 **ptr_page_table)
+{
+	// Fill this function in
+	uint32 ret = get_page_table(ptr_page_directory, virtual_address, 0, ptr_page_table);
+	if ((*ptr_page_table) != 0)
+	{
 		uint32 index_page_table = PTX(virtual_address);
 		uint32 page_table_entry = (*ptr_page_table)[index_page_table];
-		if( page_table_entry != 0)	
-			return to_frame_info( EXTRACT_ADDRESS ( page_table_entry ) );
+		if (page_table_entry != 0)
+			return to_frame_info(EXTRACT_ADDRESS(page_table_entry));
 		return 0;
 	}
 	return 0;
-		}
+}
 
 //
 // Unmaps the physical frame at 'virtual_address'.
@@ -493,13 +486,13 @@ void unmap_frame(uint32 *ptr_page_directory, void *virtual_address)
 {
 	// Fill this function in
 	uint32 *ptr_page_table;
-	struct Frame_Info* ptr_frame_info = get_frame_info(ptr_page_directory, virtual_address, &ptr_page_table);
-	if( ptr_frame_info != 0 )
+	struct Frame_Info *ptr_frame_info = get_frame_info(ptr_page_directory, virtual_address, &ptr_page_table);
+	if (ptr_frame_info != 0)
 	{
 		decrement_references(ptr_frame_info);
 		ptr_page_table[PTX(virtual_address)] = 0;
 		tlb_invalidate(ptr_page_directory, virtual_address);
-	}	
+	}
 }
 
 //========================== END OF MAPPING USER SPACE ==============================
@@ -509,13 +502,10 @@ void unmap_frame(uint32 *ptr_page_directory, void *virtual_address)
 //===================================================================================
 //===================================================================================
 
-
-
-
 //======================================================
 // functions used as helpers for malloc() and freeHeap()
 //======================================================
-//[1] get_page: 
+//[1] get_page:
 //	it should allocate one frame and map it to the given virtual address
 //	if the virtual address is already mapped, then it return 0
 // 	Return 0 on success, < 0 on error.  Errors are:
@@ -523,73 +513,71 @@ void unmap_frame(uint32 *ptr_page_directory, void *virtual_address)
 //		E_INVAL if perm is not containing PERM_USER.
 //		E_NO_MEM if there's no memory to allocate the new page,
 //		or to allocate any necessary page tables.
-// 	HINT: 	remember to free the allocated frame if there is no space 
+// 	HINT: 	remember to free the allocated frame if there is no space
 //		for the necessary page tables
 
-int get_page(uint32* ptr_page_directory, void *virtual_address, int perm)
+int get_page(uint32 *ptr_page_directory, void *virtual_address, int perm)
 {
 	// PROJECT 2008: Your code here.
-	panic("get_page function is not completed yet") ;
+	panic("get_page function is not completed yet");
 
 	//[1] check virtual address to be < USER_TOP
 	// return E_INVAL if not
 
-	//[2] check the value of perm to contain PERM_USER 
+	//[2] check the value of perm to contain PERM_USER
 	// return E_INVAL if not
 
 	//[3] check if the page containing the "virtual_address" is already mapped or not
 	// return 0 if the page is already mapped
 	// else:
-	//	Allocate a frame from the physical memory, 
+	//	Allocate a frame from the physical memory,
 	//	Map the page to the allocated frame
 	//	if there is no free space , return E_NO_MEM
-	//	else return 0				 
+	//	else return 0
 
-	return 0 ;
+	return 0;
 }
 
-//[2] calculate_required_frames: 
-uint32 calculate_required_frames(uint32* ptr_page_directory, uint32 start_virtual_address, uint32 size)
+//[2] calculate_required_frames:
+uint32 calculate_required_frames(uint32 *ptr_page_directory, uint32 start_virtual_address, uint32 size)
 {
 	// PROJECT 2008: Your code here.
-	panic("calculate_required_frames function is not completed yet") ;
+	panic("calculate_required_frames function is not completed yet");
 
-	//calculate the required page tables	
+	// calculate the required page tables
 
+	// calc the required page frames
 
-	//calc the required page frames
-
-	//return total number of frames  
-	return 0; 
+	// return total number of frames
+	return 0;
 }
-
 
 //[3] calculate_free_frames:
 
 uint32 calculate_free_frames()
 {
 	// PROJECT 2008: Your code here.
-	//panic("calculate_free_frames function is not completed yet") ;
+	// panic("calculate_free_frames function is not completed yet") ;
 
-	//calculate the free frames from the free frame list
+	// calculate the free frames from the free frame list
 	struct Frame_Info *ptr;
-	uint32 cnt = 0 ; 
+	uint32 cnt = 0;
 	LIST_FOREACH(ptr, &free_frame_list)
 	{
-		cnt++ ;
+		cnt++;
 	}
 	return cnt;
 }
 
-//[4] freeMem: 
+//[4] freeMem:
 //	This function is used to frees all pages and page tables that are mapped on
 //	range [ virtual_address, virtual_address + size ]
 //	Steps:
 //		1) Unmap all mapped pages in the range [virtual_address, virtual_address + size ]
 //		2) Free all mapped page tables in this range
 
-void freeMem(uint32* ptr_page_directory, void *virtual_address, uint32 size)
+void freeMem(uint32 *ptr_page_directory, void *virtual_address, uint32 size)
 {
 	// PROJECT 2008: Your code here.
-	panic("freeMem function is not completed yet") ;
+	panic("freeMem function is not completed yet");
 }

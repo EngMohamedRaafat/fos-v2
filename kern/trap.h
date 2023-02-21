@@ -3,7 +3,7 @@
 #ifndef FOS_KERN_TRAP_H
 #define FOS_KERN_TRAP_H
 #ifndef FOS_KERNEL
-# error "This is a FOS kernel header; user programs should not #include it"
+#error "This is a FOS kernel header; user programs should not #include it"
 #endif
 
 #include <inc/trap.h>

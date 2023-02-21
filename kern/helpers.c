@@ -15,45 +15,43 @@ FUNCTIONS:	to_physical_address, get_frame_info, tlb_invalidate
 // Global descriptor table.
 //
 // The kernel and user segments are identical(except for the DPL).
-// To load the SS register, the CPL must equal the DPL.  Thus,	
+// To load the SS register, the CPL must equal the DPL.  Thus,
 // we must duplicate the segments for the user and the kernel.
 //
 struct Segdesc gdt[] =
-{
-	// 0x0 - unused (always faults -- for trapping NULL far pointers)
-	SEG_NULL,
+	{
+		// 0x0 - unused (always faults -- for trapping NULL far pointers)
+		SEG_NULL,
 
-	// 0x8 - kernel code segment
-	[GD_KT >> 3] = SEG(STA_X | STA_R, 0x0, 0xffffffff, 0),
+		// 0x8 - kernel code segment
+		[GD_KT >> 3] = SEG(STA_X | STA_R, 0x0, 0xffffffff, 0),
 
-	// 0x10 - kernel data segment
-	[GD_KD >> 3] = SEG(STA_W, 0x0, 0xffffffff, 0),
+		// 0x10 - kernel data segment
+		[GD_KD >> 3] = SEG(STA_W, 0x0, 0xffffffff, 0),
 
-	// 0x18 - user code segment
-	[GD_UT >> 3] = SEG(STA_X | STA_R, 0x0, 0xffffffff, 3),
+		// 0x18 - user code segment
+		[GD_UT >> 3] = SEG(STA_X | STA_R, 0x0, 0xffffffff, 3),
 
-	// 0x20 - user data segment
-	[GD_UD >> 3] = SEG(STA_W, 0x0, 0xffffffff, 3),
+		// 0x20 - user data segment
+		[GD_UD >> 3] = SEG(STA_W, 0x0, 0xffffffff, 3),
 
-	// 0x28 - tss, initialized in idt_init()
-	[GD_TSS >> 3] = SEG_NULL
-};
+		// 0x28 - tss, initialized in idt_init()
+		[GD_TSS >> 3] = SEG_NULL};
 
 struct Pseudodesc gdt_pd =
-{
-	sizeof(gdt) - 1, (unsigned long) gdt
-};
+	{
+		sizeof(gdt) - 1, (unsigned long)gdt};
 
 int nvram_read(int r)
-{	
+{
 	return mc146818_read(r) | (mc146818_read(r + 1) << 8);
 }
-	
+
 void detect_memory()
 {
 	// CMOS tells us how many kilobytes there are
-	size_of_base_mem = ROUNDDOWN(nvram_read(NVRAM_BASELO)*1024, PAGE_SIZE);
-	size_of_extended_mem = ROUNDDOWN(nvram_read(NVRAM_EXTLO)*1024, PAGE_SIZE);
+	size_of_base_mem = ROUNDDOWN(nvram_read(NVRAM_BASELO) * 1024, PAGE_SIZE);
+	size_of_extended_mem = ROUNDDOWN(nvram_read(NVRAM_EXTLO) * 1024, PAGE_SIZE);
 
 	// Calculate the maxmium physical address based on whether
 	// or not there is any extended memory.  See comment in ../inc/mmu.h.
@@ -64,9 +62,9 @@ void detect_memory()
 
 	number_of_frames = maxpa / PAGE_SIZE;
 
-	cprintf("[Physical Memory] %dK\n", (int)(maxpa/1024));
-	cprintf("[Base] %dK\n", (int)(size_of_base_mem/1024));
-	cprintf("[Extended] %dK\n", (int)(size_of_extended_mem/1024));
+	cprintf("[Physical Memory] %dK\n", (int)(maxpa / 1024));
+	cprintf("[Base] %dK\n", (int)(size_of_base_mem / 1024));
+	cprintf("[Extended] %dK\n", (int)(size_of_extended_mem / 1024));
 }
 
 // --------------------------------------------------------------
@@ -90,7 +88,7 @@ void check_boot_pgdir()
 	uint32 i, n;
 
 	// check frames_info array
-	n = ROUNDUP(number_of_frames*sizeof(struct Frame_Info), PAGE_SIZE);
+	n = ROUNDUP(number_of_frames * sizeof(struct Frame_Info), PAGE_SIZE);
 	for (i = 0; i < n; i += PAGE_SIZE)
 		assert(check_va2pa(ptr_page_directory, READ_ONLY_FRAMES_INFO + i) == K_PHYSICAL_ADDRESS(frames_info) + i);
 
@@ -103,19 +101,21 @@ void check_boot_pgdir()
 		assert(check_va2pa(ptr_page_directory, KERNEL_STACK_TOP - KERNEL_STACK_SIZE + i) == K_PHYSICAL_ADDRESS(ptr_stack_bottom) + i);
 
 	// check for zero/non-zero in PDEs
-	for (i = 0; i < NPDENTRIES; i++) {
-		switch (i) {
+	for (i = 0; i < NPDENTRIES; i++)
+	{
+		switch (i)
+		{
 		case PDX(VPT):
 		case PDX(UVPT):
-		case PDX(KERNEL_STACK_TOP-1):
+		case PDX(KERNEL_STACK_TOP - 1):
 		case PDX(UENVS):
-		case PDX(READ_ONLY_FRAMES_INFO):			
+		case PDX(READ_ONLY_FRAMES_INFO):
 			assert(ptr_page_directory[i]);
 			break;
 		default:
 			if (i >= PDX(KERNEL_BASE))
 				assert(ptr_page_directory[i]);
-			else				
+			else
 				assert(ptr_page_directory[i] == 0);
 			break;
 		}
@@ -135,12 +135,12 @@ uint32 check_va2pa(uint32 *ptr_page_directory, uint32 va)
 	ptr_page_directory = &ptr_page_directory[PDX(va)];
 	if (!(*ptr_page_directory & PERM_PRESENT))
 		return ~0;
-	p = (uint32*) K_VIRTUAL_ADDRESS(EXTRACT_ADDRESS(*ptr_page_directory));
+	p = (uint32 *)K_VIRTUAL_ADDRESS(EXTRACT_ADDRESS(*ptr_page_directory));
 	if (!(p[PTX(va)] & PERM_PRESENT))
 		return ~0;
 	return EXTRACT_ADDRESS(p[PTX(va)]);
 }
-		
+
 void tlb_invalidate(uint32 *ptr_page_directory, void *virtual_address)
 {
 	// Flush the entry only if we're modifying the current address space.
@@ -170,7 +170,7 @@ void page_check()
 	// should be no free memory
 	assert(allocate_frame(&pp) == E_NO_MEM);
 
-	// there is no free memory, so we can't allocate a page table 
+	// there is no free memory, so we can't allocate a page table
 	assert(map_frame(ptr_page_directory, pp1, 0x0, 0) < 0);
 
 	// free pp0 and try again: pp0 should be used for page table
@@ -182,7 +182,7 @@ void page_check()
 	assert(pp0->references == 1);
 
 	// should be able to map pp2 at PAGE_SIZE because pp0 is already allocated for page table
-	assert(map_frame(ptr_page_directory, pp2, (void*) PAGE_SIZE, 0) == 0);
+	assert(map_frame(ptr_page_directory, pp2, (void *)PAGE_SIZE, 0) == 0);
 	assert(check_va2pa(ptr_page_directory, PAGE_SIZE) == to_physical_address(pp2));
 	assert(pp2->references == 1);
 
@@ -190,7 +190,7 @@ void page_check()
 	assert(allocate_frame(&pp) == E_NO_MEM);
 
 	// should be able to map pp2 at PAGE_SIZE because it's already there
-	assert(map_frame(ptr_page_directory, pp2, (void*) PAGE_SIZE, 0) == 0);
+	assert(map_frame(ptr_page_directory, pp2, (void *)PAGE_SIZE, 0) == 0);
 	assert(check_va2pa(ptr_page_directory, PAGE_SIZE) == to_physical_address(pp2));
 	assert(pp2->references == 1);
 
@@ -199,10 +199,10 @@ void page_check()
 	assert(allocate_frame(&pp) == E_NO_MEM);
 
 	// should not be able to map at PTSIZE because need free frame for page table
-	assert(map_frame(ptr_page_directory, pp0, (void*) PTSIZE, 0) < 0);
+	assert(map_frame(ptr_page_directory, pp0, (void *)PTSIZE, 0) < 0);
 
 	// insert pp1 at PAGE_SIZE (replacing pp2)
-	assert(map_frame(ptr_page_directory, pp1, (void*) PAGE_SIZE, 0) == 0);
+	assert(map_frame(ptr_page_directory, pp1, (void *)PAGE_SIZE, 0) == 0);
 
 	// should have pp1 at both 0 and PAGE_SIZE, pp2 nowhere, ...
 	assert(check_va2pa(ptr_page_directory, 0) == to_physical_address(pp1));
@@ -222,7 +222,7 @@ void page_check()
 	assert(pp2->references == 0);
 
 	// unmapping pp1 at PAGE_SIZE should free it
-	unmap_frame(ptr_page_directory, (void*) PAGE_SIZE);
+	unmap_frame(ptr_page_directory, (void *)PAGE_SIZE);
 	assert(check_va2pa(ptr_page_directory, 0x0) == ~0);
 	assert(check_va2pa(ptr_page_directory, PAGE_SIZE) == ~0);
 	assert(pp1->references == 0);
@@ -277,8 +277,8 @@ void turn_on_paging()
 	// Turn on paging.
 	uint32 cr0;
 	cr0 = rcr0();
-	cr0 |= CR0_PE|CR0_PG|CR0_AM|CR0_WP|CR0_NE|CR0_TS|CR0_EM|CR0_MP;
-	cr0 &= ~(CR0_TS|CR0_EM);
+	cr0 |= CR0_PE | CR0_PG | CR0_AM | CR0_WP | CR0_NE | CR0_TS | CR0_EM | CR0_MP;
+	cr0 &= ~(CR0_TS | CR0_EM);
 	lcr0(cr0);
 
 	// Current mapping: KERNEL_BASE+x => x => x.
@@ -286,13 +286,13 @@ void turn_on_paging()
 
 	// Reload all segment registers.
 	asm volatile("lgdt gdt_pd");
-	asm volatile("movw %%ax,%%gs" :: "a" (GD_UD|3));
-	asm volatile("movw %%ax,%%fs" :: "a" (GD_UD|3));
-	asm volatile("movw %%ax,%%es" :: "a" (GD_KD));
-	asm volatile("movw %%ax,%%ds" :: "a" (GD_KD));
-	asm volatile("movw %%ax,%%ss" :: "a" (GD_KD));
-	asm volatile("ljmp %0,$1f\n 1:\n" :: "i" (GD_KT));  // reload cs
-	asm volatile("lldt %%ax" :: "a" (0));
+	asm volatile("movw %%ax,%%gs" ::"a"(GD_UD | 3));
+	asm volatile("movw %%ax,%%fs" ::"a"(GD_UD | 3));
+	asm volatile("movw %%ax,%%es" ::"a"(GD_KD));
+	asm volatile("movw %%ax,%%ds" ::"a"(GD_KD));
+	asm volatile("movw %%ax,%%ss" ::"a"(GD_KD));
+	asm volatile("ljmp %0,$1f\n 1:\n" ::"i"(GD_KT)); // reload cs
+	asm volatile("lldt %%ax" ::"a"(0));
 
 	// Final mapping: KERNEL_BASE + x => KERNEL_BASE + x => x.
 
@@ -312,12 +312,11 @@ void setup_listing_to_all_page_tables_entries()
 
 	// Permissions: kernel RW, user NONE
 	uint32 phys_frame_address = K_PHYSICAL_ADDRESS(ptr_page_directory);
-	ptr_page_directory[PDX(VPT)] = CONSTRUCT_ENTRY(phys_frame_address , PERM_PRESENT | PERM_WRITEABLE);
+	ptr_page_directory[PDX(VPT)] = CONSTRUCT_ENTRY(phys_frame_address, PERM_PRESENT | PERM_WRITEABLE);
 
 	// same for UVPT
-	//Permissions: kernel R, user R
-	ptr_page_directory[PDX(UVPT)] = K_PHYSICAL_ADDRESS(ptr_page_directory)|PERM_USER|PERM_PRESENT;
-
+	// Permissions: kernel R, user R
+	ptr_page_directory[PDX(UVPT)] = K_PHYSICAL_ADDRESS(ptr_page_directory) | PERM_USER | PERM_PRESENT;
 }
 
 //
@@ -328,12 +327,13 @@ void setup_listing_to_all_page_tables_entries()
 //   On success, sets *penv to the environment.
 //   On error, sets *penv to NULL.
 //
-int envid2env(int32  envid, struct Env **env_store, bool checkperm)
+int envid2env(int32 envid, struct Env **env_store, bool checkperm)
 {
 	struct Env *e;
 
 	// If envid is zero, return the current environment.
-	if (envid == 0) {
+	if (envid == 0)
+	{
 		*env_store = curenv;
 		return 0;
 	}
@@ -344,7 +344,8 @@ int envid2env(int32  envid, struct Env **env_store, bool checkperm)
 	// (i.e., does not refer to a _previous_ environment
 	// that used the same slot in the envs[] array).
 	e = &envs[ENVX(envid)];
-	if (e->env_status == ENV_FREE || e->env_id != envid) {
+	if (e->env_status == ENV_FREE || e->env_id != envid)
+	{
 		*env_store = 0;
 		return -E_BAD_ENV;
 	}
@@ -354,7 +355,8 @@ int envid2env(int32  envid, struct Env **env_store, bool checkperm)
 	// If checkperm is set, the specified environment
 	// must be either the current environment
 	// or an immediate child of the current environment.
-	if (checkperm && e != curenv && e->env_parent_id != curenv->env_id) {
+	if (checkperm && e != curenv && e->env_parent_id != curenv->env_id)
+	{
 		*env_store = 0;
 		return -E_BAD_ENV;
 	}
@@ -364,4 +366,3 @@ int envid2env(int32  envid, struct Env **env_store, bool checkperm)
 }
 
 //
-

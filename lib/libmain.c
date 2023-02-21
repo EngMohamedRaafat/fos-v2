@@ -8,8 +8,7 @@ extern void _main(int argc, char **argv);
 volatile struct Env *env;
 char *binaryname = "(PROGRAM NAME UNKNOWN)";
 
-void
-libmain(int argc, char **argv)
+void libmain(int argc, char **argv)
 {
 	// set env to point at our env structure in envs[].
 	// LAB 3: Your code here.
@@ -23,7 +22,6 @@ libmain(int argc, char **argv)
 	_main(argc, argv);
 
 	// exit gracefully
-	//exit();
+	// exit();
 	sleep();
 }
-

@@ -12,22 +12,19 @@
 #include <kern/user_environment.h>
 #include <kern/trap.h>
 
-
-//Functions Declaration 
+// Functions Declaration
 //======================
 void print_welcome_message();
 //=======================================
 
-
-
-//First ever function called in FOS kernel
+// First ever function called in FOS kernel
 void FOS_initialize()
 {
-	//get actual addresses after code linking 
+	// get actual addresses after code linking
 	extern char start_of_uninitialized_data_section[], end_of_kernel[];
 
 	// Before doing anything else,
-	// clear the uninitialized global data (BSS) section of our program, from start_of_uninitialized_data_section to end_of_kernel 
+	// clear the uninitialized global data (BSS) section of our program, from start_of_uninitialized_data_section to end_of_kernel
 	// This ensures that all static/global variables start with zero value.
 	memset(start_of_uninitialized_data_section, 0, end_of_kernel - start_of_uninitialized_data_section);
 
@@ -35,7 +32,7 @@ void FOS_initialize()
 	// Can't call cprintf until after we do this!
 	console_initialize();
 
-	//print welcome message
+	// print welcome message
 	print_welcome_message();
 
 	// Lab 2 memory management initialization functions
@@ -69,7 +66,6 @@ void print_welcome_message()
 	cprintf("\n\n\n");
 }
 
-
 /*
  * Variable panicstr contains argument to first call to panic; used as flag
  * to indicate that the kernel has already called panic.
@@ -80,7 +76,7 @@ static const char *panicstr;
  * Panic is called on unresolvable fatal errors.
  * It prints "panic: mesg", and then enters the kernel command prompt.
  */
-void _panic(const char *file, int line, const char *fmt,...)
+void _panic(const char *file, int line, const char *fmt, ...)
 {
 	va_list ap;
 
@@ -96,12 +92,12 @@ void _panic(const char *file, int line, const char *fmt,...)
 
 dead:
 	/* break into the kernel command prompt */
-	while (1==1)
+	while (1 == 1)
 		run_command_prompt();
 }
 
 /* like panic, but don't enters the kernel command prompt*/
-void _warn(const char *file, int line, const char *fmt,...)
+void _warn(const char *file, int line, const char *fmt, ...)
 {
 	va_list ap;
 
@@ -111,4 +107,3 @@ void _warn(const char *file, int line, const char *fmt,...)
 	cprintf("\n");
 	va_end(ap);
 }
-

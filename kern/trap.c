@@ -14,16 +14,15 @@ static struct Taskstate ts;
 /* Interrupt descriptor table.  (Must be built at run time because
  * shifted function addresses can't be represented in relocation records.)
  */
-struct Gatedesc idt[256] = { { 0 } };
+struct Gatedesc idt[256] = {{0}};
 struct Pseudodesc idt_pd = {
-	sizeof(idt) - 1, (uint32) idt
-};
-extern  void (*PAGE_FAULT)();
-extern  void (*SYSCALL_HANDLER)();
+	sizeof(idt) - 1, (uint32)idt};
+extern void (*PAGE_FAULT)();
+extern void (*SYSCALL_HANDLER)();
 
 static const char *trapname(int trapno)
 {
-	static const char * const excnames[] = {
+	static const char *const excnames[] = {
 		"Divide error",
 		"Debug",
 		"Non-Maskable Interrupt",
@@ -43,26 +42,23 @@ static const char *trapname(int trapno)
 		"x87 FPU Floating-Point Error",
 		"Alignment Check",
 		"Machine-Check",
-		"SIMD Floating-Point Exception"
-	};
+		"SIMD Floating-Point Exception"};
 
-	if (trapno < sizeof(excnames)/sizeof(excnames[0]))
+	if (trapno < sizeof(excnames) / sizeof(excnames[0]))
 		return excnames[trapno];
 	if (trapno == T_SYSCALL)
 		return "System call";
 	return "(unknown trap)";
 }
 
-
-void
-idt_init(void)
+void idt_init(void)
 {
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
-	//initialize idt
-	SETGATE(idt[T_PGFLT], 0, GD_KT , &PAGE_FAULT, 0) ;
-	SETGATE(idt[T_SYSCALL], 0, GD_KT , &SYSCALL_HANDLER, 3) ;
+	// initialize idt
+	SETGATE(idt[T_PGFLT], 0, GD_KT, &PAGE_FAULT, 0);
+	SETGATE(idt[T_SYSCALL], 0, GD_KT, &SYSCALL_HANDLER, 3);
 
 	// Setup a TSS so that we get the right stack
 	// when we trap to the kernel.
@@ -70,8 +66,8 @@ idt_init(void)
 	ts.ts_ss0 = GD_KD;
 
 	// Initialize the TSS field of the gdt.
-	gdt[GD_TSS >> 3] = SEG16(STS_T32A, (uint32) (&ts),
-					sizeof(struct Taskstate), 0);
+	gdt[GD_TSS >> 3] = SEG16(STS_T32A, (uint32)(&ts),
+							 sizeof(struct Taskstate), 0);
 	gdt[GD_TSS >> 3].sd_s = 0;
 
 	// Load the TSS
@@ -81,8 +77,7 @@ idt_init(void)
 	asm volatile("lidt idt_pd");
 }
 
-void
-print_trapframe(struct Trapframe *tf)
+void print_trapframe(struct Trapframe *tf)
 {
 	cprintf("TRAP frame at %p\n", tf);
 	print_regs(&tf->tf_regs);
@@ -97,8 +92,7 @@ print_trapframe(struct Trapframe *tf)
 	cprintf("  ss   0x----%04x\n", tf->tf_ss);
 }
 
-void
-print_regs(struct PushRegs *regs)
+void print_regs(struct PushRegs *regs)
 {
 	cprintf("  edi  0x%08x\n", regs->reg_edi);
 	cprintf("  esi  0x%08x\n", regs->reg_esi);
@@ -116,18 +110,13 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
 
-	if(tf->tf_trapno == T_PGFLT)
+	if (tf->tf_trapno == T_PGFLT)
 	{
 		page_fault_handler(tf);
 	}
 	else if (tf->tf_trapno == T_SYSCALL)
 	{
-		uint32 ret = syscall(tf->tf_regs.reg_eax
-			,tf->tf_regs.reg_edx
-			,tf->tf_regs.reg_ecx
-			,tf->tf_regs.reg_ebx
-			,tf->tf_regs.reg_edi
-					,tf->tf_regs.reg_esi);
+		uint32 ret = syscall(tf->tf_regs.reg_eax, tf->tf_regs.reg_edx, tf->tf_regs.reg_ecx, tf->tf_regs.reg_ebx, tf->tf_regs.reg_edi, tf->tf_regs.reg_esi);
 		tf->tf_regs.reg_eax = ret;
 	}
 	else
@@ -136,7 +125,8 @@ trap_dispatch(struct Trapframe *tf)
 		print_trapframe(tf);
 		if (tf->tf_cs == GD_KT)
 			panic("unhandled trap in kernel");
-		else {
+		else
+		{
 			env_destroy(curenv);
 			return;
 		}
@@ -144,12 +134,12 @@ trap_dispatch(struct Trapframe *tf)
 	return;
 }
 
-void
-trap(struct Trapframe *tf)
+void trap(struct Trapframe *tf)
 {
-	//cprintf("Incoming TRAP frame at %p\n", tf);
+	// cprintf("Incoming TRAP frame at %p\n", tf);
 
-	if ((tf->tf_cs & 3) == 3) {
+	if ((tf->tf_cs & 3) == 3)
+	{
 		// Trapped from user mode.
 		// Copy trap frame (which is currently on the stack)
 		// into 'curenv->env_tf', so that running the environment
@@ -163,14 +153,12 @@ trap(struct Trapframe *tf)
 	// Dispatch based on what type of trap occurred
 	trap_dispatch(tf);
 
-        // Return to the current environment, which should be runnable.
-        assert(curenv && curenv->env_status == ENV_RUNNABLE);
-        env_run(curenv);
+	// Return to the current environment, which should be runnable.
+	assert(curenv && curenv->env_status == ENV_RUNNABLE);
+	env_run(curenv);
 }
 
-
-void
-page_fault_handler(struct Trapframe *tf)
+void page_fault_handler(struct Trapframe *tf)
 {
 	uint32 fault_va;
 
@@ -211,9 +199,7 @@ page_fault_handler(struct Trapframe *tf)
 
 	// Destroy the environment that caused the fault.
 	cprintf("[%08x] user fault va %08x ip %08x\n",
-	curenv->env_id, fault_va, tf->tf_eip);
+			curenv->env_id, fault_va, tf->tf_eip);
 	print_trapframe(tf);
 	env_destroy(curenv);
-
 }
-

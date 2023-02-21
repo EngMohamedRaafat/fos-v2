@@ -8,8 +8,7 @@ char *argv0;
  * It prints "panic: <message>", then causes a breakpoint exception,
  * which causes FOS to enter the FOS kernel monitor.
  */
-void
-_panic(const char *file, int line, const char *fmt,...)
+void _panic(const char *file, int line, const char *fmt, ...)
 {
 	va_list ap;
 
@@ -26,4 +25,3 @@ _panic(const char *file, int line, const char *fmt,...)
 	while (1)
 		asm volatile("int3");
 }
-

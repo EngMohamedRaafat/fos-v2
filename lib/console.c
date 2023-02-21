@@ -2,8 +2,7 @@
 #include <inc/string.h>
 #include <inc/lib.h>
 
-void
-cputchar(int ch)
+void cputchar(int ch)
 {
 	char c = ch;
 
@@ -12,12 +11,10 @@ cputchar(int ch)
 	sys_cputs(&c, 1);
 }
 
-int
-getchar(void)
+int getchar(void)
 {
 	return sys_cgetc();
 }
-
 
 int iscons(int fdnum)
 {

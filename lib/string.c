@@ -2,8 +2,7 @@
 
 #include <inc/string.h>
 
-int
-strlen(const char *s)
+int strlen(const char *s)
 {
 	int n;
 
@@ -12,8 +11,7 @@ strlen(const char *s)
 	return n;
 }
 
-int
-strnlen(const char *s, uint32 size)
+int strnlen(const char *s, uint32 size)
 {
 	int n;
 
@@ -34,12 +32,14 @@ strcpy(char *dst, const char *src)
 }
 
 char *
-strncpy(char *dst, const char *src, uint32 size) {
+strncpy(char *dst, const char *src, uint32 size)
+{
 	uint32 i;
 	char *ret;
 
 	ret = dst;
-	for (i = 0; i < size; i++) {
+	for (i = 0; i < size; i++)
+	{
 		*dst++ = *src;
 		// If strlen(src) < size, null-pad 'dst' out to 'size' chars
 		if (*src != '\0')
@@ -54,7 +54,8 @@ strlcpy(char *dst, const char *src, uint32 size)
 	char *dst_in;
 
 	dst_in = dst;
-	if (size > 0) {
+	if (size > 0)
+	{
 		while (--size > 0 && *src != '\0')
 			*dst++ = *src++;
 		*dst = '\0';
@@ -62,23 +63,21 @@ strlcpy(char *dst, const char *src, uint32 size)
 	return dst - dst_in;
 }
 
-int
-strcmp(const char *p, const char *q)
+int strcmp(const char *p, const char *q)
 {
 	while (*p && *p == *q)
 		p++, q++;
-	return (int) ((unsigned char) *p - (unsigned char) *q);
+	return (int)((unsigned char)*p - (unsigned char)*q);
 }
 
-int
-strncmp(const char *p, const char *q, uint32 n)
+int strncmp(const char *p, const char *q, uint32 n)
 {
 	while (n > 0 && *p && *p == *q)
 		n--, p++, q++;
 	if (n == 0)
 		return 0;
 	else
-		return (int) ((unsigned char) *p - (unsigned char) *q);
+		return (int)((unsigned char)*p - (unsigned char)*q);
 }
 
 // Return a pointer to the first occurrence of 'c' in 's',
@@ -88,7 +87,7 @@ strchr(const char *s, char c)
 {
 	for (; *s; s++)
 		if (*s == c)
-			return (char *) s;
+			return (char *)s;
 	return 0;
 }
 
@@ -100,9 +99,8 @@ strfind(const char *s, char c)
 	for (; *s; s++)
 		if (*s == c)
 			break;
-	return (char *) s;
+	return (char *)s;
 }
-
 
 void *
 memset(void *v, int c, uint32 n)
@@ -137,30 +135,32 @@ memmove(void *dst, const void *src, uint32 n)
 {
 	const char *s;
 	char *d;
-	
+
 	s = src;
 	d = dst;
-	if (s < d && s + n > d) {
+	if (s < d && s + n > d)
+	{
 		s += n;
 		d += n;
 		while (n-- > 0)
 			*--d = *--s;
-	} else
+	}
+	else
 		while (n-- > 0)
 			*d++ = *s++;
 
 	return dst;
 }
 
-int
-memcmp(const void *v1, const void *v2, uint32 n)
+int memcmp(const void *v1, const void *v2, uint32 n)
 {
-	const uint8 *s1 = (const uint8 *) v1;
-	const uint8 *s2 = (const uint8 *) v2;
+	const uint8 *s1 = (const uint8 *)v1;
+	const uint8 *s2 = (const uint8 *)v2;
 
-	while (n-- > 0) {
+	while (n-- > 0)
+	{
 		if (*s1 != *s2)
-			return (int) *s1 - (int) *s2;
+			return (int)*s1 - (int)*s2;
 		s1++, s2++;
 	}
 
@@ -170,15 +170,14 @@ memcmp(const void *v1, const void *v2, uint32 n)
 void *
 memfind(const void *s, int c, uint32 n)
 {
-	const void *ends = (const char *) s + n;
+	const void *ends = (const char *)s + n;
 	for (; s < ends; s++)
-		if (*(const unsigned char *) s == (unsigned char) c)
+		if (*(const unsigned char *)s == (unsigned char)c)
 			break;
-	return (void *) s;
+	return (void *)s;
 }
 
-long
-strtol(const char *s, char **endptr, int base)
+long strtol(const char *s, char **endptr, int base)
 {
 	int neg = 0;
 	long val = 0;
@@ -202,7 +201,8 @@ strtol(const char *s, char **endptr, int base)
 		base = 10;
 
 	// digits
-	while (1) {
+	while (1)
+	{
 		int dig;
 
 		if (*s >= '0' && *s <= '9')
@@ -220,36 +220,36 @@ strtol(const char *s, char **endptr, int base)
 	}
 
 	if (endptr)
-		*endptr = (char *) s;
+		*endptr = (char *)s;
 	return (neg ? -val : val);
 }
 
-int strsplit(char *string, char *SPLIT_CHARS, char **argv, int * argc)
+int strsplit(char *string, char *SPLIT_CHARS, char **argv, int *argc)
 {
 	// Parse the command string into splitchars-separated arguments
 	*argc = 0;
 	(argv)[*argc] = 0;
-	while (1) 
+	while (1)
 	{
 		// trim splitchars
 		while (*string && strchr(SPLIT_CHARS, *string))
 			*string++ = 0;
-		
-		//if the command string is finished, then break the loop
+
+		// if the command string is finished, then break the loop
 		if (*string == 0)
 			break;
 
-		//check current number of arguments
-		if (*argc == MAX_ARGUMENTS-1) 
+		// check current number of arguments
+		if (*argc == MAX_ARGUMENTS - 1)
 		{
 			return 0;
 		}
-		
+
 		// save the previous argument and scan past next arg
 		(argv)[(*argc)++] = string;
 		while (*string && !strchr(SPLIT_CHARS, *string))
 			string++;
 	}
 	(argv)[*argc] = 0;
-	return 1 ;
+	return 1;
 }

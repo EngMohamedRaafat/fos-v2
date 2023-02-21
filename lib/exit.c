@@ -1,14 +1,12 @@
 
 #include <inc/lib.h>
 
-void
-exit(void)
+void exit(void)
 {
-	sys_env_destroy(0);	
+	sys_env_destroy(0);
 }
 
-void
-sleep(void)
-{	
+void sleep(void)
+{
 	sys_env_sleep();
 }
