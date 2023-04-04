@@ -2,15 +2,16 @@
 /*
 KEY WORDS
 ==========
-MACROS: 	K_PHYSICAL_ADDRESS, K_VIRTUAL_ADDRESS, PDX, PTX, CONSTRUCT_ENTRY, EXTRACT_ADDRESS, ROUNDUP, ROUNDDOWN, LIST_INIT, LIST_INSERT_HEAD, LIST_FIRST, LIST_REMOVE
+MACROS: 	STATIC_KERNEL_PHYSICAL_ADDRESS, STATIC_KERNEL_VIRTUAL_ADDRESS, PDX, PTX, CONSTRUCT_ENTRY, EXTRACT_ADDRESS, ROUNDUP, ROUNDDOWN, LIST_INIT, LIST_INSERT_HEAD, LIST_FIRST, LIST_REMOVE
 CONSTANTS:	PAGE_SIZE, PERM_PRESENT, PERM_WRITEABLE, PERM_USER, KERNEL_STACK_TOP, KERNEL_STACK_SIZE, KERNEL_BASE, READ_ONLY_FRAMES_INFO, PHYS_IO_MEM, PHYS_EXTENDED_MEM, E_NO_MEM
 VARIABLES:	ptr_free_mem, ptr_page_directory, phys_page_directory, bootstack, Frame_Info, frames_info, free_frame_list, references, prev_next_info, size_of_extended_mem, number_of_frames, ptr_frame_info ,create, perm, va
 FUNCTIONS:	to_physical_address, get_frame_info, tlb_invalidate
 =====================================================================================================================================================================================================
-*/
+ */
 
 #include <kern/memory_manager.h>
 #include <kern/helpers.h>
+#include <kern/kheap.h>
 
 // Global descriptor table.
 //
@@ -49,22 +50,50 @@ int nvram_read(int r)
 
 void detect_memory()
 {
+	uint32 maxpa;				 // Maximum physical address
+	uint32 size_of_base_mem;	 // Amount of base memory (in bytes)
+	uint32 size_of_extended_mem; // Amount of extended memory (in bytes)
+
 	// CMOS tells us how many kilobytes there are
 	size_of_base_mem = ROUNDDOWN(nvram_read(NVRAM_BASELO) * 1024, PAGE_SIZE);
 	size_of_extended_mem = ROUNDDOWN(nvram_read(NVRAM_EXTLO) * 1024, PAGE_SIZE);
 
-	// Calculate the maxmium physical address based on whether
-	// or not there is any extended memory.  See comment in ../inc/mmu.h.
-	if (size_of_extended_mem)
-		maxpa = PHYS_EXTENDED_MEM + size_of_extended_mem;
-	else
-		maxpa = size_of_extended_mem;
+	// 2016
+	// For physical memory larger than 16MB, we needed to read total memory size
+	//  from a different register of the MC chip, see here:
+	//  http://bochs.sourceforge.net/techspec/CMOS-reference.txt
+	//  "CMOS 34h - AMI -"
+	uint32 size_of_other_mem = ROUNDDOWN(nvram_read(0x34) * 1024 * 64, PAGE_SIZE);
+	// cprintf("other mem = %dK\n", size_of_other_mem/1024);
 
+	// Calculate the maximum physical address based on whether
+	// or not there is any extended memory.  See comment in ../inc/mmu.h.
+	// 2016
+	if (size_of_other_mem > 0)
+	{
+		maxpa = size_of_other_mem + 16 * 1024 * 1024;
+		size_of_extended_mem = maxpa - PHYS_EXTENDED_MEM;
+	}
+	else
+	{
+		if (size_of_extended_mem)
+			maxpa = PHYS_EXTENDED_MEM + size_of_extended_mem;
+		else
+			maxpa = size_of_extended_mem;
+	}
+
+	uint32 kernel_virtual_area = ((0xFFFFFFFF - KERNEL_BASE) + 1);
+	if (USE_KHEAP == 0 && maxpa > kernel_virtual_area)
+	{
+		cprintf("Error!: Physical memory = %dK larger than kernel virtual area (%dK)\n", maxpa / 1024, kernel_virtual_area / 1024);
+		cprintf("Cannot use physical memory larger than kernel virtual area\nTo enable physical memory larger than virtual kernel area, set USE_KHEAP = 1 in FOS code");
+		while (1)
+			;
+	}
 	number_of_frames = maxpa / PAGE_SIZE;
 
-	cprintf("[Physical Memory] %dK\n", (int)(maxpa / 1024));
-	cprintf("[Base] %dK\n", (int)(size_of_base_mem / 1024));
-	cprintf("[Extended] %dK\n", (int)(size_of_extended_mem / 1024));
+	cprintf("Physical memory: %dK available, ", (int)(maxpa / 1024));
+	cprintf("base = %dK, extended = %dK\n", (int)(size_of_base_mem / 1024), (int)(size_of_extended_mem / 1024));
 }
 
 // --------------------------------------------------------------
@@ -88,17 +117,30 @@ void check_boot_pgdir()
 	uint32 i, n;
 
 	// check frames_info array
-	n = ROUNDUP(number_of_frames * sizeof(struct Frame_Info), PAGE_SIZE);
-	for (i = 0; i < n; i += PAGE_SIZE)
-		assert(check_va2pa(ptr_page_directory, READ_ONLY_FRAMES_INFO + i) == K_PHYSICAL_ADDRESS(frames_info) + i);
+	// 2016: READ_ONLY_FRAMES_INFO not valid any more since it can't fit in 4 MB space
+	//	n = ROUNDUP(number_of_frames*sizeof(struct Frame_Info), PAGE_SIZE);
+	//	for (i = 0; i < n; i += PAGE_SIZE)
+	//	{
+	//		//cprintf("i = %x, arg 1  = %x, arg 2 = %x \n",i, check_va2pa(ptr_page_directory, READ_ONLY_FRAMES_INFO + i), STATIC_KERNEL_PHYSICAL_ADDRESS(frames_info) + i);
+	//		assert(check_va2pa(ptr_page_directory, READ_ONLY_FRAMES_INFO + i) == STATIC_KERNEL_PHYSICAL_ADDRESS(frames_info) + i);
+	//	}
 
-	// check phys mem
-	for (i = 0; KERNEL_BASE + i != 0; i += PAGE_SIZE)
-		assert(check_va2pa(ptr_page_directory, KERNEL_BASE + i) == i);
+	// 2016
+	//  check phys mem
+	if (USE_KHEAP)
+	{
+		for (i = 0; KERNEL_BASE + i < (uint32)ptr_free_mem; i += PAGE_SIZE)
+			assert(check_va2pa(ptr_page_directory, KERNEL_BASE + i) == i);
+	}
+	else
+	{
+		for (i = 0; KERNEL_BASE + i != 0; i += PAGE_SIZE)
+			assert(check_va2pa(ptr_page_directory, KERNEL_BASE + i) == i);
+	}
 
 	// check kernel stack
 	for (i = 0; i < KERNEL_STACK_SIZE; i += PAGE_SIZE)
-		assert(check_va2pa(ptr_page_directory, KERNEL_STACK_TOP - KERNEL_STACK_SIZE + i) == K_PHYSICAL_ADDRESS(ptr_stack_bottom) + i);
+		assert(check_va2pa(ptr_page_directory, KERNEL_STACK_TOP - KERNEL_STACK_SIZE + i) == STATIC_KERNEL_PHYSICAL_ADDRESS(ptr_stack_bottom) + i);
 
 	// check for zero/non-zero in PDEs
 	for (i = 0; i < NPDENTRIES; i++)
@@ -109,7 +151,8 @@ void check_boot_pgdir()
 		case PDX(UVPT):
 		case PDX(KERNEL_STACK_TOP - 1):
 		case PDX(UENVS):
-		case PDX(READ_ONLY_FRAMES_INFO):
+			// 2016: READ_ONLY_FRAMES_INFO not valid any more since it can't fit in 4 MB space
+			// case PDX(READ_ONLY_FRAMES_INFO):
 			assert(ptr_page_directory[i]);
 			break;
 		default:
@@ -120,7 +163,7 @@ void check_boot_pgdir()
 			break;
 		}
 	}
-	cprintf("[Boot Page Dir] Success\n");
+	cprintf("check_boot_pgdir() succeeded!\n");
 }
 
 // This function returns the physical address of the page containing 'va',
@@ -132,12 +175,20 @@ uint32 check_va2pa(uint32 *ptr_page_directory, uint32 va)
 {
 	uint32 *p;
 
-	ptr_page_directory = &ptr_page_directory[PDX(va)];
-	if (!(*ptr_page_directory & PERM_PRESENT))
+	uint32 *dirEntry = &(ptr_page_directory[PDX(va)]);
+
+	// LOG_VARS("dir table entry %x", *dirEntry);
+
+	if (!(*dirEntry & PERM_PRESENT))
 		return ~0;
-	p = (uint32 *)K_VIRTUAL_ADDRESS(EXTRACT_ADDRESS(*ptr_page_directory));
+	p = (uint32 *)STATIC_KERNEL_VIRTUAL_ADDRESS(EXTRACT_ADDRESS(*dirEntry));
+
+	// LOG_VARS("ptr to page table  = %x", p);
+
 	if (!(p[PTX(va)] & PERM_PRESENT))
 		return ~0;
+
+	// LOG_VARS("page phys addres = %x",EXTRACT_ADDRESS(p[PTX(va)]));
 	return EXTRACT_ADDRESS(p[PTX(va)]);
 }
 
@@ -148,6 +199,7 @@ void tlb_invalidate(uint32 *ptr_page_directory, void *virtual_address)
 	invlpg(virtual_address);
 }
 
+/*
 void page_check()
 {
 	struct Frame_Info *pp, *pp0, *pp1, *pp2;
@@ -182,7 +234,7 @@ void page_check()
 	assert(pp0->references == 1);
 
 	// should be able to map pp2 at PAGE_SIZE because pp0 is already allocated for page table
-	assert(map_frame(ptr_page_directory, pp2, (void *)PAGE_SIZE, 0) == 0);
+	assert(map_frame(ptr_page_directory, pp2, (void*) PAGE_SIZE, 0) == 0);
 	assert(check_va2pa(ptr_page_directory, PAGE_SIZE) == to_physical_address(pp2));
 	assert(pp2->references == 1);
 
@@ -190,7 +242,7 @@ void page_check()
 	assert(allocate_frame(&pp) == E_NO_MEM);
 
 	// should be able to map pp2 at PAGE_SIZE because it's already there
-	assert(map_frame(ptr_page_directory, pp2, (void *)PAGE_SIZE, 0) == 0);
+	assert(map_frame(ptr_page_directory, pp2, (void*) PAGE_SIZE, 0) == 0);
 	assert(check_va2pa(ptr_page_directory, PAGE_SIZE) == to_physical_address(pp2));
 	assert(pp2->references == 1);
 
@@ -199,10 +251,10 @@ void page_check()
 	assert(allocate_frame(&pp) == E_NO_MEM);
 
 	// should not be able to map at PTSIZE because need free frame for page table
-	assert(map_frame(ptr_page_directory, pp0, (void *)PTSIZE, 0) < 0);
+	assert(map_frame(ptr_page_directory, pp0, (void*) PTSIZE, 0) < 0);
 
 	// insert pp1 at PAGE_SIZE (replacing pp2)
-	assert(map_frame(ptr_page_directory, pp1, (void *)PAGE_SIZE, 0) == 0);
+	assert(map_frame(ptr_page_directory, pp1, (void*) PAGE_SIZE, 0) == 0);
 
 	// should have pp1 at both 0 and PAGE_SIZE, pp2 nowhere, ...
 	assert(check_va2pa(ptr_page_directory, 0) == to_physical_address(pp1));
@@ -222,7 +274,7 @@ void page_check()
 	assert(pp2->references == 0);
 
 	// unmapping pp1 at PAGE_SIZE should free it
-	unmap_frame(ptr_page_directory, (void *)PAGE_SIZE);
+	unmap_frame(ptr_page_directory, (void*) PAGE_SIZE);
 	assert(check_va2pa(ptr_page_directory, 0x0) == ~0);
 	assert(check_va2pa(ptr_page_directory, PAGE_SIZE) == ~0);
 	assert(pp1->references == 0);
@@ -236,20 +288,27 @@ void page_check()
 
 	// forcibly take pp0 back
 	assert(EXTRACT_ADDRESS(ptr_page_directory[0]) == to_physical_address(pp0));
-	ptr_page_directory[0] = 0;
-	assert(pp0->references == 1);
-	pp0->references = 0;
-
+	if(USE_KHEAP)
+	{
+		kfree((void*)kheap_virtual_address(EXTRACT_ADDRESS(ptr_page_directory[0])));
+	}
+	else
+	{
+		ptr_page_directory[0] = 0;
+		assert(pp0->references == 1);
+		pp0->references = 0;
+		free_frame(pp0);
+	}
 	// give free list back
 	free_frame_list = fl;
 
 	// free the frames_info we took
-	free_frame(pp0);
 	free_frame(pp1);
 	free_frame(pp2);
 
-	cprintf("[Page Check] Success\n");
+	cprintf("page_check() succeeded!\n");
 }
+*/
 
 void turn_on_paging()
 {
@@ -269,7 +328,17 @@ void turn_on_paging()
 
 	// Map VA 0:4MB same as VA (KERNEL_BASE), i.e. to PA 0:4MB.
 	// (Limits our kernel to <4MB)
-	ptr_page_directory[0] = ptr_page_directory[PDX(KERNEL_BASE)];
+
+	// 2016
+	// ptr_page_directory[0] = ptr_page_directory[PDX(KERNEL_BASE)];
+	{
+		int i = PDX(KERNEL_BASE);
+		int j = 0;
+		for (; i < PDX((uint32)ptr_free_mem); ++i, ++j)
+		{
+			ptr_page_directory[j] = ptr_page_directory[i];
+		}
+	}
 
 	// Install page table.
 	lcr3(phys_page_directory);
@@ -298,8 +367,16 @@ void turn_on_paging()
 
 	// This mapping was only used after paging was turned on but
 	// before the segment registers were reloaded.
-	ptr_page_directory[0] = 0;
-
+	// 2016
+	// ptr_page_directory[0] = 0;
+	{
+		int i = PDX(KERNEL_BASE);
+		int j = 0;
+		for (; i < PDX((uint32)ptr_free_mem); ++i, ++j)
+		{
+			ptr_page_directory[j] = 0;
+		}
+	}
 	// Flush the TLB for good measure, to kill the ptr_page_directory[0] mapping.
 	lcr3(phys_page_directory);
 }
@@ -311,12 +388,12 @@ void setup_listing_to_all_page_tables_entries()
 	// a virtual page table at virtual address VPT.
 
 	// Permissions: kernel RW, user NONE
-	uint32 phys_frame_address = K_PHYSICAL_ADDRESS(ptr_page_directory);
+	uint32 phys_frame_address = STATIC_KERNEL_PHYSICAL_ADDRESS(ptr_page_directory);
 	ptr_page_directory[PDX(VPT)] = CONSTRUCT_ENTRY(phys_frame_address, PERM_PRESENT | PERM_WRITEABLE);
 
 	// same for UVPT
 	// Permissions: kernel R, user R
-	ptr_page_directory[PDX(UVPT)] = K_PHYSICAL_ADDRESS(ptr_page_directory) | PERM_USER | PERM_PRESENT;
+	ptr_page_directory[PDX(UVPT)] = STATIC_KERNEL_PHYSICAL_ADDRESS(ptr_page_directory) | PERM_USER | PERM_PRESENT;
 }
 
 //
@@ -347,7 +424,7 @@ int envid2env(int32 envid, struct Env **env_store, bool checkperm)
 	if (e->env_status == ENV_FREE || e->env_id != envid)
 	{
 		*env_store = 0;
-		return -E_BAD_ENV;
+		return E_BAD_ENV;
 	}
 
 	// Check that the calling environment has legitimate permission
@@ -358,7 +435,7 @@ int envid2env(int32 envid, struct Env **env_store, bool checkperm)
 	if (checkperm && e != curenv && e->env_parent_id != curenv->env_id)
 	{
 		*env_store = 0;
-		return -E_BAD_ENV;
+		return E_BAD_ENV;
 	}
 
 	*env_store = e;

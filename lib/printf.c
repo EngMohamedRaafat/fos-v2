@@ -22,13 +22,15 @@ struct printbuf
 	char buf[256];
 };
 
-static void
-putch(int ch, struct printbuf *b)
+// 2017:
+uint8 printProgName = 0;
+
+static void putch(int ch, struct printbuf *b)
 {
 	b->buf[b->idx++] = ch;
 	if (b->idx == 256 - 1)
 	{
-		sys_cputs(b->buf, b->idx);
+		sys_cputs(b->buf, b->idx, printProgName);
 		b->idx = 0;
 	}
 	b->cnt++;
@@ -41,8 +43,9 @@ int vcprintf(const char *fmt, va_list ap)
 	b.idx = 0;
 	b.cnt = 0;
 	vprintfmt((void *)putch, &b, fmt, ap);
-	sys_cputs(b.buf, b.idx);
+	sys_cputs(b.buf, b.idx, printProgName);
 
+	printProgName = 0;
 	return b.cnt;
 }
 
@@ -50,10 +53,24 @@ int cprintf(const char *fmt, ...)
 {
 	va_list ap;
 	int cnt;
+	printProgName = 1;
+	va_start(ap, fmt);
+	cnt = vcprintf(fmt, ap);
+	va_end(ap);
+
+	return cnt;
+}
+
+int atomic_cprintf(const char *fmt, ...)
+{
+	sys_disable_interrupt();
+	va_list ap;
+	int cnt;
 
 	va_start(ap, fmt);
 	cnt = vcprintf(fmt, ap);
 	va_end(ap);
 
+	sys_enable_interrupt();
 	return cnt;
 }
