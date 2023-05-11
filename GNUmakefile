@@ -66,6 +66,7 @@ include user/Makefrag
 
 GDBPORT 	= 26000
 QEMUGDB 	= -gdb tcp::$(GDBPORT)
+QEMUEXTRAS	= -parallel file:fos-shell.log
 QEMUOPTS 	= -drive file=$(IMAGE),media=disk,format=raw -smp 2 -m 32 $(QEMUEXTRAS)
 
 qemu: all
