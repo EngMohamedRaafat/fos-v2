@@ -90,8 +90,8 @@ LIST_INSERT_HEAD(&flist, g, frob_link);	/* add g as first element in list */
  */
 
 /*
- * A list is headed by a structure defined by the LIST_HEAD macro.  This structure con‐
- * tains a single pointer to the first element on the list.  The elements are doubly
+ * A list is headed by a structure defined by the LIST_HEAD macro.  This structure contains
+ * a single pointer to the first element on the list.  The elements are doubly
  * linked so that an arbitrary element can be removed without traversing the list.  New
  * elements can be added to the list after an existing element or at the head of the list.
  * A LIST_HEAD structure is declared as follows:
@@ -106,23 +106,20 @@ LIST_INSERT_HEAD(&flist, g, frob_link);	/* add g as first element in list */
  *
  * (The names head and headp are user selectable.)
  */
-#define LIST_HEAD(name, type)                                                        \
-	struct name                                                                      \
-	{                                                                                \
-		struct type *lh_first; /* first element */                                   \
-		struct type *lh_last;                                                        \
-		struct type *___ptr_next; /* used as a temp saving place in LIST_FOREACH  */ \
-		uint32 size;			  /*maintained by list functions */                  \
-	}
+#define	LIST_HEAD(name, type)						\
+struct name {								\
+	struct type *lh_first;	/* first element */			\
+	struct type *lh_last; \
+	struct type *	___ptr_next; 	/* used as a temp saving place in LIST_FOREACH  */				\
+	uint32 size;					/*maintained by list functions */ \
+}
 
 /*
  * Set a list head variable to LIST_HEAD_INITIALIZER(head)
  * to reset it to the empty list.
  */
-#define LIST_HEAD_INITIALIZER(head) \
-	{                               \
-		NULL                        \
-	}
+#define	LIST_HEAD_INITIALIZER(head)					\
+	{ NULL }
 
 /*
  * Use this inside a structure "LIST_ENTRY(type) prev_next_info" to use
@@ -132,12 +129,11 @@ LIST_INSERT_HEAD(&flist, g, frob_link);	/* add g as first element in list */
  * this very LIST_ENTRY, so that if we want to remove this list entry,
  * we can do *le_prev = le_next to update the structure pointing at us.
  */
-#define LIST_ENTRY(type)                                \
-	struct                                              \
-	{                                                   \
-		struct type *le_next; /* next element */        \
-		struct type *le_prev; /* ptr to prev element */ \
-	}
+#define	LIST_ENTRY(type)						\
+struct {								\
+	struct type *le_next;	/* next element */			\
+	struct type *le_prev;	/* ptr to prev element */	\
+}
 
 /*
  * List functions.
@@ -146,30 +142,30 @@ LIST_INSERT_HEAD(&flist, g, frob_link);	/* add g as first element in list */
 /*
  * Is the list named "head" empty?
  */
-#define LIST_EMPTY(head) ((head)->lh_first == NULL)
+#define	LIST_EMPTY(head)	((head)->lh_first == NULL)
 
 /*
  * Return the first element in the list named "head".
  */
-#define LIST_FIRST(head) ((head)->lh_first)
-#define LIST_LAST(head) ((head)->lh_last)
+#define	LIST_FIRST(head)	((head)->lh_first)
+#define	LIST_LAST(head)	((head)->lh_last)
 
-#define LIST_SIZE(head) ((head)->size)
+#define	LIST_SIZE(head)	((head)->size)
 
 /*
  * Return the element after "elm" in the list.
  * The "prev_next_info" name is the link element as above.
  */
-// #define	LIST_NEXT(elm)	((elm)->prev_next_info.le_next)
-#define LIST_NEXT(elm) ((elm)->prev_next_info.le_next)
+//#define	LIST_NEXT(elm)	((elm)->prev_next_info.le_next)
+#define	LIST_NEXT(elm)	((elm)->prev_next_info.le_next)
 
-#define LOOP_LIST_NEXT(elm) ((elm == NULL ? NULL : elm->prev_next_info.le_next))
+#define	LOOP_LIST_NEXT(elm)	( (elm == NULL ? NULL : elm->prev_next_info.le_next) )
 
 /*
  * Return the element before "elm" in the list.
  * The "prev_next_info" name is the link element as above.
  */
-#define LIST_PREV(elm) ((elm)->prev_next_info.le_prev)
+#define	LIST_PREV(elm)	((elm)->prev_next_info.le_prev)
 
 /*
  * Iterate over the elements in the list named "head".
@@ -183,134 +179,121 @@ LIST_INSERT_HEAD(&flist, g, frob_link);	/* add g as first element in list */
 	(var) = LIST_NEXT((var)))
 */
 
-// TODO: Warning CANNOT BE USED AS NESTED LOOP because of the temp ___ptr_next, NEEDS MODIFICATION
-#define LIST_FOREACH(var, head)                                  \
-	for ((var) = LIST_FIRST((head));                             \
-		 ((head)->___ptr_next = LOOP_LIST_NEXT((var))) || (var); \
-		 (var) = (head)->___ptr_next)
+//TODO: Warning CANNOT BE USED AS NESTED LOOP because of the temp ___ptr_next, NEEDS MODIFICATION
+#define LIST_FOREACH(var, head)					\
+	for ((var) = LIST_FIRST((head));				\
+	( (head)->___ptr_next = LOOP_LIST_NEXT((var))) || (var);							\
+	(var) = (head)->___ptr_next)
 
 /*
  * Reset the list named "head" to the empty list.
  */
-#define LIST_INIT(head)            \
-	do                             \
-	{                              \
-		LIST_FIRST((head)) = NULL; \
-		LIST_LAST((head)) = NULL;  \
-		((head)->size) = 0;        \
-	} while (0)
+#define	LIST_INIT(head) do {						\
+	LIST_FIRST((head)) = NULL;					\
+	LIST_LAST((head)) = NULL;		\
+	((head)->size) = 0;			\
+} while (0)
 
 /*
  * Insert the element "elm" *after* the element "listelm" which is
  * already in the list.  The "prev_next_info" name is the link element
  * as above.
  */
-#define LIST_INSERT_AFTER(list, listelm, elm)                  \
-	do                                                         \
-	{                                                          \
-		if ((LIST_NEXT((elm)) = LIST_NEXT((listelm))) != NULL) \
-			LIST_PREV(LIST_NEXT((listelm))) = ((elm));         \
-		LIST_NEXT((listelm)) = ((elm));                        \
-		LIST_PREV((elm)) = (listelm);                          \
-		if (LIST_NEXT((elm)) == NULL)                          \
-		{                                                      \
-			LIST_LAST((list)) = ((elm));                       \
-		}                                                      \
-		((list)->size)++;                                      \
-	} while (0)
+#define	LIST_INSERT_AFTER(list, listelm, elm) do {			\
+	if ((listelm == NULL) || (elm == NULL)) panic("LIST_INSERT_AFTER: one of the two elements is NULL!");			\
+	if ((LIST_NEXT((elm)) = LIST_NEXT((listelm))) != NULL)\
+		LIST_PREV(LIST_NEXT((listelm))) =	((elm));	  \
+	LIST_NEXT((listelm)) = ((elm));				\
+	LIST_PREV((elm)) = (listelm);		\
+	if( LIST_NEXT((elm)) == NULL)	\
+	{	\
+		LIST_LAST((list)) = ((elm));	\
+	}	\
+	((list)->size)++ ;			\
+} while (0)
 
 /*
  * Insert the element "elm" *before* the element "listelm" which is
  * already in the list.  The "prev_next_info" name is the link element
  * as above.
  */
-#define LIST_INSERT_BEFORE(list, listelm, elm)       \
-	do                                               \
-	{                                                \
-		LIST_PREV((elm)) = LIST_PREV((listelm));     \
-		LIST_NEXT((elm)) = (listelm);                \
-		if (LIST_PREV((listelm)) != NULL)            \
-		{                                            \
-			LIST_NEXT(LIST_PREV((listelm))) = (elm); \
-		}                                            \
-		else                                         \
-		{                                            \
-			LIST_FIRST((list)) = (elm);              \
-		}                                            \
-		LIST_PREV((listelm)) = ((elm));              \
-		((list)->size)++;                            \
-	} while (0)
+#define	LIST_INSERT_BEFORE(list, listelm, elm) do {			\
+	if ((listelm == NULL) || (elm == NULL)) panic("LIST_INSERT_BEFORE: one of the two elements is NULL!");			\
+	LIST_PREV((elm)) = LIST_PREV((listelm));		\
+	LIST_NEXT((elm)) = (listelm);				\
+	if(LIST_PREV((listelm)) != NULL)	\
+	{	\
+		LIST_NEXT(LIST_PREV((listelm))) = (elm);				\
+	}	\
+	else	\
+	{	\
+		LIST_FIRST((list)) = (elm)	; 	\
+	}	\
+	LIST_PREV((listelm)) = ((elm));	\
+	((list)->size)++ ;			\
+} while (0)
 
 /*
  * Insert the element "elm" at the head of the list named "head".
  * The "prev_next_info" name is the link element as above.
  */
-#define LIST_INSERT_HEAD(list, elm)                          \
-	do                                                       \
-	{                                                        \
-		if ((LIST_NEXT((elm)) = LIST_FIRST((list))) != NULL) \
-			LIST_PREV(LIST_FIRST((list))) = ((elm));         \
-		else                                                 \
-			LIST_LAST((list)) = (elm);                       \
-		LIST_FIRST((list)) = (elm);                          \
-		LIST_PREV((elm)) = NULL;                             \
-		((list)->size)++;                                    \
-	} while (0)
+#define	LIST_INSERT_HEAD(list, elm) do {				\
+	if (elm == NULL) panic("LIST_INSERT_HEAD: element is NULL!");			\
+	if ((LIST_NEXT((elm)) = LIST_FIRST((list))) != NULL)	\
+		LIST_PREV(LIST_FIRST((list)))= ((elm));\
+	else	\
+		LIST_LAST((list)) = (elm); \
+	LIST_FIRST((list)) = (elm);					\
+	LIST_PREV((elm)) = NULL;			\
+	((list)->size)++ ;			\
+} while (0)
 
 /*
  * Insert the element "elm" at the tail of the list named "list".
  * The "prev_next_info" name is the link element as above.
  */
-#define LIST_INSERT_TAIL(list, elm)                         \
-	do                                                      \
-	{                                                       \
-		if ((LIST_PREV((elm)) = LIST_LAST((list))) != NULL) \
-			LIST_NEXT(LIST_LAST((list))) = ((elm));         \
-		else                                                \
-			LIST_FIRST((list)) = (elm);                     \
-		LIST_LAST((list)) = (elm);                          \
-		LIST_NEXT((elm)) = NULL;                            \
-		((list)->size)++;                                   \
-	} while (0)
+#define	LIST_INSERT_TAIL(list, elm) do {				\
+	if (elm == NULL) panic("LIST_INSERT_TAIL: element is NULL!");			\
+	if ((LIST_PREV((elm)) = LIST_LAST((list))) != NULL)	\
+		LIST_NEXT(LIST_LAST((list)))= ((elm));\
+	else	\
+		LIST_FIRST((list)) = (elm); \
+	LIST_LAST((list)) = (elm);					\
+	LIST_NEXT((elm)) = NULL;			\
+	((list)->size)++ ;			\
+} while (0)
 
 /*
  * Remove the element "elm" from the list.
  * The "prev_next_info" name is the link element as above.
  */
-#define LIST_REMOVE(list, elm)                            \
-	do                                                    \
-	{                                                     \
-		if (LIST_NEXT((elm)) != NULL)                     \
-			LIST_PREV(LIST_NEXT((elm))) = LIST_PREV(elm); \
-		else                                              \
-			LIST_LAST(list) = LIST_PREV(elm);             \
-		if (LIST_PREV(elm) != NULL)                       \
-			LIST_NEXT(LIST_PREV(elm)) = LIST_NEXT(elm);   \
-		else                                              \
-			LIST_FIRST((list)) = LIST_NEXT(elm);          \
-		LIST_NEXT((elm)) = NULL;                          \
-		LIST_PREV((elm)) = NULL;                          \
-		((list)->size)--;                                 \
-	} while (0)
+#define	LIST_REMOVE(list, elm) do {					\
+	if (elm == NULL) panic("LIST_REMOVE: element is NULL!");			\
+	if (LIST_NEXT((elm)) != NULL)				\
+		LIST_PREV(LIST_NEXT((elm))) = LIST_PREV(elm);				\
+	else	\
+		LIST_LAST(list) = LIST_PREV(elm); \
+	if(LIST_PREV(elm) != NULL)	\
+		LIST_NEXT(LIST_PREV(elm)) = LIST_NEXT(elm);	\
+	else	\
+		LIST_FIRST((list)) = LIST_NEXT(elm); \
+	LIST_NEXT((elm)) = NULL;			\
+	LIST_PREV((elm)) = NULL;		\
+	((list)->size)-- ;			\
+} while (0)
 
-#define LIST_CONCAT(list1, list2)                            \
-	do                                                       \
-	{                                                        \
-		if (LIST_FIRST(list1) == NULL)                       \
-		{                                                    \
-			LIST_FIRST(list1) = LIST_FIRST(list2);           \
-			LIST_LAST(list1) = LIST_LAST(list2);             \
-		}                                                    \
-		else if (LIST_FIRST(list2) != NULL)                  \
-		{                                                    \
-			LIST_NEXT(LIST_LAST(list1)) = LIST_FIRST(list2); \
-			LIST_PREV(LIST_FIRST(list2)) = LIST_LAST(list1); \
-			LIST_LAST(list1) = LIST_LAST(list2);             \
-			LIST_INIT(list2);                                \
-		}                                                    \
-		((list1)->size) += ((list2)->size);                  \
-	} while (0)
+#define	LIST_CONCAT(list1, list2) do {					\
+	if(LIST_FIRST(list1) == NULL) {LIST_FIRST(list1) = LIST_FIRST(list2); LIST_LAST(list1) = LIST_LAST(list2); }\
+    else if(LIST_FIRST(list2) != NULL)	\
+    {	\
+		LIST_NEXT(LIST_LAST(list1)) = LIST_FIRST(list2);	\
+		LIST_PREV(LIST_FIRST(list2)) = LIST_LAST(list1);	\
+		LIST_LAST(list1) = LIST_LAST(list2);	\
+		LIST_INIT(list2); \
+	}	\
+	((list1)->size) += ((list2)->size);		\
+} while (0)
 
-// #define	LIST_CLEAR(list)	(LIST_INIT(list))
+//#define	LIST_CLEAR(list)	(LIST_INIT(list))
 
-#endif /* !_SYS_QUEUE_H_ */
+#endif	/* !_SYS_QUEUE_H_ */
