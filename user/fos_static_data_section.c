@@ -4,8 +4,8 @@
 int arr[20000];
 
 void _main(void)
-{
+{	
 	atomic_cprintf("user data section contains 20,000 integer\n");
-
-	return;
+	
+	return;	
 }
