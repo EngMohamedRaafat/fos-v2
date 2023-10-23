@@ -8,7 +8,8 @@ char *argv0;
  * It prints "panic: <message>", then causes a breakpoint exception,
  * which causes FOS to enter the FOS kernel monitor.
  */
-void _panic(const char *file, int line, const char *fmt, ...)
+void
+_panic(const char *file, int line, const char *fmt,...)
 {
 	va_list ap;
 	va_start(ap, fmt);
@@ -20,38 +21,33 @@ void _panic(const char *file, int line, const char *fmt, ...)
 	vcprintf("\n", NULL);
 
 	// Cause a breakpoint exception
-	//	while (1);
-	//		asm volatile("int3");
+//	while (1);
+//		asm volatile("int3");
 
-	// 2013: exit the panic env only
-	exit();
+	//2013: exit the panic env only
+	exit() ;
 
 	// should not return here
-	while (1)
-		;
+	while (1) ;
 }
 
-void CheckWSWithoutLastIndex(uint32 *expectedPages, int arraySize)
+void CheckWSArrayWithoutLastIndex(uint32 *expectedPages, int arraySize)
 {
 	if (arraySize != myEnv->page_WS_max_size)
 	{
 		panic("number of expected pages SHOULD BE EQUAL to max WS size... review your TA!!");
 	}
 	int expectedNumOfEmptyLocs = 0;
-	for (int e = 0; e < arraySize; e++)
-	{
-		if (expectedPages[e] == 0)
-		{
+	for (int e = 0; e < arraySize; e++) {
+		if (expectedPages[e] == 0) {
 			expectedNumOfEmptyLocs++;
 			continue;
 		}
 		int found = 0;
-		for (int w = 0; w < myEnv->page_WS_max_size; w++)
-		{
-			if (myEnv->__uptr_pws[w].empty == 0)
-			{
-				if (ROUNDDOWN(myEnv->__uptr_pws[w].virtual_address, PAGE_SIZE) == expectedPages[e])
-				{
+		for (int w = 0; w < myEnv->page_WS_max_size; w++) {
+			if (myEnv->__uptr_pws[w].empty == 0) {
+				if (ROUNDDOWN(myEnv->__uptr_pws[w].virtual_address, PAGE_SIZE)
+						== expectedPages[e]) {
 					found = 1;
 					break;
 				}
@@ -59,17 +55,15 @@ void CheckWSWithoutLastIndex(uint32 *expectedPages, int arraySize)
 		}
 		if (!found)
 			panic(
-				"PAGE WS entry checking failed... trace it by printing page WS before & after fault");
+					"PAGE WS entry checking failed... trace it by printing page WS before & after fault");
 	}
 	int actualNumOfEmptyLocs = 0;
-	for (int w = 0; w < myEnv->page_WS_max_size; w++)
-	{
-		if (myEnv->__uptr_pws[w].empty == 1)
-		{
+	for (int w = 0; w < myEnv->page_WS_max_size; w++) {
+		if (myEnv->__uptr_pws[w].empty == 1) {
 			actualNumOfEmptyLocs++;
 		}
 	}
 	if (expectedNumOfEmptyLocs != actualNumOfEmptyLocs)
 		panic(
-			"PAGE WS entry checking failed... number of empty locations is not correct");
+				"PAGE WS entry checking failed... number of empty locations is not correct");
 }

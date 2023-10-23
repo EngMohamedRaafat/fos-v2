@@ -15,45 +15,40 @@
 // in order to make the lines output to the console atomic
 // and prevent interrupts from causing context switches
 // in the middle of a console output line and such.
-struct printbuf
-{
+struct printbuf {
 	int idx; // current buffer index
 	int cnt; // total bytes printed so far
 	char buf[256];
 };
 
-// 2017:
+//2017:
 uint8 printProgName = 0;
 
-static void putch(int ch, struct printbuf *b)
-{
+static void putch(int ch, struct printbuf *b) {
 	b->buf[b->idx++] = ch;
-	if (b->idx == 256 - 1)
-	{
+	if (b->idx == 256 - 1) {
 		sys_cputs(b->buf, b->idx, printProgName);
 		b->idx = 0;
 	}
 	b->cnt++;
 }
 
-int vcprintf(const char *fmt, va_list ap)
-{
+int vcprintf(const char *fmt, va_list ap) {
 	struct printbuf b;
 
 	b.idx = 0;
 	b.cnt = 0;
-	vprintfmt((void *)putch, &b, fmt, ap);
+	vprintfmt((void*) putch, &b, fmt, ap);
 	sys_cputs(b.buf, b.idx, printProgName);
 
 	printProgName = 0;
 	return b.cnt;
 }
 
-int cprintf(const char *fmt, ...)
-{
+int cprintf(const char *fmt, ...) {
 	va_list ap;
 	int cnt;
-	printProgName = 1;
+	printProgName = 1 ;
 	va_start(ap, fmt);
 	cnt = vcprintf(fmt, ap);
 	va_end(ap);
@@ -61,8 +56,7 @@ int cprintf(const char *fmt, ...)
 	return cnt;
 }
 
-int atomic_cprintf(const char *fmt, ...)
-{
+int atomic_cprintf(const char *fmt, ...) {
 	sys_disable_interrupt();
 	va_list ap;
 	int cnt;

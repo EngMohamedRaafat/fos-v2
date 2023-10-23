@@ -18,15 +18,15 @@
  * so that -E_NO_MEM and E_NO_MEM are equivalent.
  */
 
-static const char *const error_string[MAXERROR + 1] =
-	{
-		NULL,
-		"unspecified error",
-		"bad environment",
-		"invalid parameter",
-		"out of memory",
-		"out of environments",
-		"segmentation fault",
+static const char * const error_string[MAXERROR + 1] =
+{
+	NULL,
+	"unspecified error",
+	"bad environment",
+	"invalid parameter",
+	"out of memory",
+	"out of environments",
+	"segmentation fault",
 };
 
 /*
@@ -34,16 +34,13 @@ static const char *const error_string[MAXERROR + 1] =
  * using specified putch function and associated pointer putdat.
  */
 static void
-printnum(void (*putch)(int, void *), void *putdat,
-		 unsigned long long num, unsigned base, int width, int padc)
+printnum(void (*putch)(int, void*), void *putdat,
+	 unsigned long long num, unsigned base, int width, int padc)
 {
 	// first recursively print all preceding (more significant) digits
-	if (num >= base)
-	{
+	if (num >= base) {
 		printnum(putch, putdat, num / base, base, width - 1, padc);
-	}
-	else
-	{
+	} else {
 		// print any needed pad characters before first digit
 		while (--width > 0)
 			putch(padc, putdat);
@@ -79,10 +76,12 @@ getint(va_list *ap, int lflag)
 		return va_arg(*ap, int);
 }
 
-// Main function to format and print a string.
-void printfmt(void (*putch)(int, void *), void *putdat, const char *fmt, ...);
 
-void vprintfmt(void (*putch)(int, void *), void *putdat, const char *fmt, va_list ap)
+// Main function to format and print a string.
+void printfmt(void (*putch)(int, void*), void *putdat, const char *fmt, ...);
+
+void
+vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 {
 	register const char *p;
 	register int ch, err;
@@ -90,10 +89,8 @@ void vprintfmt(void (*putch)(int, void *), void *putdat, const char *fmt, va_lis
 	int base, lflag, width, precision, altflag;
 	char padc;
 
-	while (1)
-	{
-		while ((ch = *(unsigned char *)fmt++) != '%')
-		{
+	while (1) {
+		while ((ch = *(unsigned char *) fmt++) != '%') {
 			if (ch == '\0')
 				return;
 			putch(ch, putdat);
@@ -106,8 +103,7 @@ void vprintfmt(void (*putch)(int, void *), void *putdat, const char *fmt, va_lis
 		lflag = 0;
 		altflag = 0;
 	reswitch:
-		switch (ch = *(unsigned char *)fmt++)
-		{
+		switch (ch = *(unsigned char *) fmt++) {
 
 		// flag to pad on the right
 		case '-':
@@ -129,8 +125,7 @@ void vprintfmt(void (*putch)(int, void *), void *putdat, const char *fmt, va_lis
 		case '7':
 		case '8':
 		case '9':
-			for (precision = 0;; ++fmt)
-			{
+			for (precision = 0; ; ++fmt) {
 				precision = precision * 10 + ch - '0';
 				ch = *fmt;
 				if (ch < '0' || ch > '9')
@@ -196,10 +191,9 @@ void vprintfmt(void (*putch)(int, void *), void *putdat, const char *fmt, va_lis
 		// (signed) decimal
 		case 'd':
 			num = getint(&ap, lflag);
-			if ((long long)num < 0)
-			{
+			if ((long long) num < 0) {
 				putch('-', putdat);
-				num = -(long long)num;
+				num = -(long long) num;
 			}
 			base = 10;
 			goto number;
@@ -222,7 +216,8 @@ void vprintfmt(void (*putch)(int, void *), void *putdat, const char *fmt, va_lis
 		case 'p':
 			putch('0', putdat);
 			putch('x', putdat);
-			num = (unsigned long long)(uint32)va_arg(ap, void *);
+			num = (unsigned long long)
+				(uint32) va_arg(ap, void *);
 			base = 16;
 			goto number;
 
@@ -249,7 +244,8 @@ void vprintfmt(void (*putch)(int, void *), void *putdat, const char *fmt, va_lis
 	}
 }
 
-void printfmt(void (*putch)(int, void *), void *putdat, const char *fmt, ...)
+void
+printfmt(void (*putch)(int, void*), void *putdat, const char *fmt, ...)
 {
 	va_list ap;
 
@@ -258,8 +254,7 @@ void printfmt(void (*putch)(int, void *), void *putdat, const char *fmt, ...)
 	va_end(ap);
 }
 
-struct sprintbuf
-{
+struct sprintbuf {
 	char *buf;
 	char *ebuf;
 	int cnt;
@@ -273,15 +268,16 @@ sprintputch(int ch, struct sprintbuf *b)
 		*b->buf++ = ch;
 }
 
-int vsnprintf(char *buf, int n, const char *fmt, va_list ap)
+int
+vsnprintf(char *buf, int n, const char *fmt, va_list ap)
 {
-	struct sprintbuf b = {buf, buf + n - 1, 0};
+	struct sprintbuf b = {buf, buf+n-1, 0};
 
 	if (buf == NULL || n < 1)
 		return -E_INVAL;
 
 	// print the string to the buffer
-	vprintfmt((void *)sprintputch, &b, fmt, ap);
+	vprintfmt((void*)sprintputch, &b, fmt, ap);
 
 	// null terminate the buffer
 	*b.buf = '\0';
@@ -289,7 +285,8 @@ int vsnprintf(char *buf, int n, const char *fmt, va_list ap)
 	return b.cnt;
 }
 
-int snprintf(char *buf, int n, const char *fmt, ...)
+int
+snprintf(char *buf, int n, const char *fmt, ...)
 {
 	va_list ap;
 	int rc;
@@ -300,3 +297,5 @@ int snprintf(char *buf, int n, const char *fmt, ...)
 
 	return rc;
 }
+
+

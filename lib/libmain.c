@@ -8,12 +8,13 @@ extern void _main(int argc, char **argv);
 volatile struct Env *myEnv = NULL;
 volatile char *binaryname = "(PROGRAM NAME UNKNOWN)";
 
-void libmain(int argc, char **argv)
+void
+libmain(int argc, char **argv)
 {
 	int envIndex = sys_getenvindex();
 	myEnv = &(envs[envIndex]);
 
-	// SET THE PROGRAM NAME
+	//SET THE PROGRAM NAME
 	if (myEnv->prog_name[0] != '\0')
 		binaryname = myEnv->prog_name;
 
@@ -27,10 +28,13 @@ void libmain(int argc, char **argv)
 	// call user main routine
 	_main(argc, argv);
 
+
+
 	sys_disable_interrupt();
 	cprintf("**************************************\n");
 	cprintf("Num of PAGE faults = %d, modif = %d\n", myEnv->pageFaultsCounter, myEnv->nModifiedPages);
-	// cprintf("Num of freeing scarce memory = %d, freeing full working set = %d\n", myEnv->freeingScarceMemCounter, myEnv->freeingFullWSCounter);
+	cprintf("# PAGE IN (from disk) = %d, # PAGE OUT (on disk) = %d, # NEW PAGE ADDED (on disk) = %d\n", myEnv->nPageIn, myEnv->nPageOut,myEnv->nNewPageAdded);
+	//cprintf("Num of freeing scarce memory = %d, freeing full working set = %d\n", myEnv->freeingScarceMemCounter, myEnv->freeingFullWSCounter);
 	cprintf("Num of clocks = %d\n", myEnv->nClocks);
 	cprintf("**************************************\n");
 	sys_enable_interrupt();
@@ -38,3 +42,4 @@ void libmain(int argc, char **argv)
 	// exit gracefully
 	exit();
 }
+

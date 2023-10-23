@@ -1,8 +1,9 @@
 // Basic string routines.  Not hardware optimized, but not shabby.
 
 #include <inc/string.h>
-
-int strlen(const char *s)
+#include <inc/assert.h>
+int
+strlen(const char *s)
 {
 	int n;
 
@@ -11,7 +12,8 @@ int strlen(const char *s)
 	return n;
 }
 
-int strnlen(const char *s, uint32 size)
+int
+strnlen(const char *s, uint32 size)
 {
 	int n;
 
@@ -32,14 +34,12 @@ strcpy(char *dst, const char *src)
 }
 
 char *
-strncpy(char *dst, const char *src, uint32 size)
-{
+strncpy(char *dst, const char *src, uint32 size) {
 	uint32 i;
 	char *ret;
 
 	ret = dst;
-	for (i = 0; i < size; i++)
-	{
+	for (i = 0; i < size; i++) {
 		*dst++ = *src;
 		// If strlen(src) < size, null-pad 'dst' out to 'size' chars
 		if (*src != '\0')
@@ -54,8 +54,7 @@ strlcpy(char *dst, const char *src, uint32 size)
 	char *dst_in;
 
 	dst_in = dst;
-	if (size > 0)
-	{
+	if (size > 0) {
 		while (--size > 0 && *src != '\0')
 			*dst++ = *src++;
 		*dst = '\0';
@@ -63,21 +62,23 @@ strlcpy(char *dst, const char *src, uint32 size)
 	return dst - dst_in;
 }
 
-int strcmp(const char *p, const char *q)
+int
+strcmp(const char *p, const char *q)
 {
 	while (*p && *p == *q)
 		p++, q++;
-	return (int)((unsigned char)*p - (unsigned char)*q);
+	return (int) ((unsigned char) *p - (unsigned char) *q);
 }
 
-int strncmp(const char *p, const char *q, uint32 n)
+int
+strncmp(const char *p, const char *q, uint32 n)
 {
 	while (n > 0 && *p && *p == *q)
 		n--, p++, q++;
 	if (n == 0)
 		return 0;
 	else
-		return (int)((unsigned char)*p - (unsigned char)*q);
+		return (int) ((unsigned char) *p - (unsigned char) *q);
 }
 
 // Return a pointer to the first occurrence of 'c' in 's',
@@ -87,7 +88,7 @@ strchr(const char *s, char c)
 {
 	for (; *s; s++)
 		if (*s == c)
-			return (char *)s;
+			return (char *) s;
 	return 0;
 }
 
@@ -99,8 +100,9 @@ strfind(const char *s, char c)
 	for (; *s; s++)
 		if (*s == c)
 			break;
-	return (char *)s;
+	return (char *) s;
 }
+
 
 void *
 memset(void *v, int c, uint32 n)
@@ -138,29 +140,27 @@ memmove(void *dst, const void *src, uint32 n)
 
 	s = src;
 	d = dst;
-	if (s < d && s + n > d)
-	{
+	if (s < d && s + n > d) {
 		s += n;
 		d += n;
 		while (n-- > 0)
 			*--d = *--s;
-	}
-	else
+	} else
 		while (n-- > 0)
 			*d++ = *s++;
 
 	return dst;
 }
 
-int memcmp(const void *v1, const void *v2, uint32 n)
+int
+memcmp(const void *v1, const void *v2, uint32 n)
 {
-	const uint8 *s1 = (const uint8 *)v1;
-	const uint8 *s2 = (const uint8 *)v2;
+	const uint8 *s1 = (const uint8 *) v1;
+	const uint8 *s2 = (const uint8 *) v2;
 
-	while (n-- > 0)
-	{
+	while (n-- > 0) {
 		if (*s1 != *s2)
-			return (int)*s1 - (int)*s2;
+			return (int) *s1 - (int) *s2;
 		s1++, s2++;
 	}
 
@@ -170,14 +170,15 @@ int memcmp(const void *v1, const void *v2, uint32 n)
 void *
 memfind(const void *s, int c, uint32 n)
 {
-	const void *ends = (const char *)s + n;
+	const void *ends = (const char *) s + n;
 	for (; s < ends; s++)
-		if (*(const unsigned char *)s == (unsigned char)c)
+		if (*(const unsigned char *) s == (unsigned char) c)
 			break;
-	return (void *)s;
+	return (void *) s;
 }
 
-long strtol(const char *s, char **endptr, int base)
+long
+strtol(const char *s, char **endptr, int base)
 {
 	int neg = 0;
 	long val = 0;
@@ -201,8 +202,7 @@ long strtol(const char *s, char **endptr, int base)
 		base = 10;
 
 	// digits
-	while (1)
-	{
+	while (1) {
 		int dig;
 
 		if (*s >= '0' && *s <= '9')
@@ -220,63 +220,66 @@ long strtol(const char *s, char **endptr, int base)
 	}
 
 	if (endptr)
-		*endptr = (char *)s;
+		*endptr = (char *) s;
 	return (neg ? -val : val);
 }
 
-void ltostr(long value, char *str)
+void
+ltostr(long value, char *str)
 {
 	int neg = 0;
-	int s = 0;
+	int s = 0 ;
 
 	// plus/minus sign
 	if (value < 0)
 	{
 		neg = 1;
 		str[0] = '-';
-		value = value * -1;
-		s++;
+		value = value * -1 ;
+		s++ ;
 	}
 	do
 	{
-		int mod = value % 10;
-		str[s++] = mod + '0';
-		value = value / 10;
+		int mod = value % 10 ;
+		str[s++] = mod + '0' ;
+		value = value / 10 ;
 	} while (value % 10 != 0);
 
-	// reverse the string
-	int start = 0;
-	int end = s - 1;
+	//reverse the string
+	int start = 0 ;
+	int end = s-1 ;
 	if (neg)
-		start = 1;
-	while (start < end)
+		start = 1 ;
+	while(start<end)
 	{
-		char tmp = str[start];
-		str[start] = str[end];
+		char tmp = str[start] ;
+		str[start] = str[end] ;
 		str[end] = tmp;
-		start++;
-		end--;
+		start++ ;
+		end-- ;
 	}
 
-	str[s] = 0;
+	str[s] = 0 ;
 	// we don't properly detect overflow!
+
 }
 
-void strcconcat(const char *str1, const char *str2, char *final)
+void
+strcconcat(const char *str1, const char *str2, char *final)
 {
 	int len1 = strlen(str1);
 	int len2 = strlen(str2);
-	int s = 0;
-	for (s = 0; s < len1; s++)
-		final[s] = str1[s];
+	int s = 0 ;
+	for (s=0 ; s < len1 ; s++)
+		final[s] = str1[s] ;
 
-	int i = 0;
-	for (i = 0; i < len2; i++)
-		final[s++] = str2[i];
+	int i = 0 ;
+	for (i=0 ; i < len2 ; i++)
+		final[s++] = str2[i] ;
 
 	final[s] = 0;
 }
-int strsplit(char *string, char *SPLIT_CHARS, char **argv, int *argc)
+int strsplit(char *string, char *SPLIT_CHARS, char **argv, int * argc)
 {
 	// Parse the command string into splitchars-separated arguments
 	*argc = 0;
@@ -287,12 +290,12 @@ int strsplit(char *string, char *SPLIT_CHARS, char **argv, int *argc)
 		while (*string && strchr(SPLIT_CHARS, *string))
 			*string++ = 0;
 
-		// if the command string is finished, then break the loop
+		//if the command string is finished, then break the loop
 		if (*string == 0)
 			break;
 
-		// check current number of arguments
-		if (*argc == MAX_ARGUMENTS - 1)
+		//check current number of arguments
+		if (*argc == MAX_ARGUMENTS-1)
 		{
 			return 0;
 		}
@@ -303,5 +306,15 @@ int strsplit(char *string, char *SPLIT_CHARS, char **argv, int *argc)
 			string++;
 	}
 	(argv)[*argc] = 0;
-	return 1;
+	return 1 ;
+}
+
+
+/*2024*/
+char* str2lower(char *dst, const char *src)
+{
+	//TODO: [PROJECT'23.MS1 - #1] [1] PLAY WITH CODE! - str2lower
+	//Comment the following line before start coding...
+	panic("process_command is not implemented yet");
+	return NULL;
 }
