@@ -158,7 +158,7 @@ int free_share_object(uint32 sharedObjectID)
 // [5] Create frames_storage:
 //===========================
 // if KHEAP = 1: Create the frames_storage by allocating a PAGE for its directory
-inline uint32* create_frames_storage()
+uint32* create_frames_storage()
 {
 	uint32* frames_storage = kmalloc(PAGE_SIZE);
 	if(frames_storage == NULL)
@@ -171,7 +171,7 @@ inline uint32* create_frames_storage()
 // [6] Add frame to storage:
 //===========================
 // Add a frame info to the storage of frames at the given index
-inline void add_frame_to_storage(uint32* frames_storage, struct FrameInfo* ptr_frame_info, uint32 index)
+void add_frame_to_storage(uint32* frames_storage, struct FrameInfo* ptr_frame_info, uint32 index)
 {
 	uint32 va = index * PAGE_SIZE ;
 	uint32 *ptr_page_table;
@@ -196,7 +196,7 @@ inline void add_frame_to_storage(uint32* frames_storage, struct FrameInfo* ptr_f
 // [7] Get frame from storage:
 //===========================
 // Get a frame info from the storage of frames at the given index
-inline struct FrameInfo* get_frame_from_storage(uint32* frames_storage, uint32 index)
+struct FrameInfo* get_frame_from_storage(uint32* frames_storage, uint32 index)
 {
 	struct FrameInfo* ptr_frame_info;
 	uint32 *ptr_page_table ;
@@ -208,7 +208,7 @@ inline struct FrameInfo* get_frame_from_storage(uint32* frames_storage, uint32 i
 //===========================
 // [8] Clear the frames_storage:
 //===========================
-inline void clear_frames_storage(uint32* frames_storage)
+void clear_frames_storage(uint32* frames_storage)
 {
 	int fourMega = 1024 * PAGE_SIZE ;
 	int i ;

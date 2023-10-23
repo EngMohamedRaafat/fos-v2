@@ -51,10 +51,10 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address);
 int freeSharedObject(int32 sharedObjectID, void *startVA);
 
 //2014
-inline uint32* create_frames_storage();
-inline void add_frame_to_storage(uint32* frames_storage, struct FrameInfo* ptr_frame_info, uint32 index);
-inline struct FrameInfo* get_frame_from_storage(uint32* frames_storage, uint32 index);
-inline void clear_frames_storage(uint32* frames_storage);
+uint32* create_frames_storage();
+void add_frame_to_storage(uint32* frames_storage, struct FrameInfo* ptr_frame_info, uint32 index);
+struct FrameInfo* get_frame_from_storage(uint32* frames_storage, uint32 index);
+void clear_frames_storage(uint32* frames_storage);
 
 //2017
 int get_share_object_ID(int32 ownerID, char* name);
