@@ -13,33 +13,53 @@ KERN_LDFLAGS := $(LDFLAGS) -T kern/kernel.ld -nostdlib
 #
 # We also snatch the use of a couple handy source files
 # from the lib directory, to avoid gratuitous code duplication.
+
+#[TODO: Need Better Solution]
+# ANY NEW ADDED FILE INSIDE ANY OF THE SUBDIR NEED TO BE TEMPORARILY MODIFIED (USING touch COMMAND) INSIDE "GNUmakefile" TO FORCE BUILDING THEM EACH TIME (el7 :))
+# OTHERWISE, ANY CHANGE IN ANY .h FILE IN THE ENTIRE CODE WILL NOT REFLECT ON ANY OF THESE "kern/*/*" FILES
+
 KERN_SRCFILES :=	kern/entry.S \
 			kern/init.c \
-			kern/console.c \
-			kern/command_prompt.c \
-			kern/helpers.c \
-			kern/memory_manager.c \
-			kern/user_environment.c \
-			kern/kclock.c \
-			kern/picirq.c \
-			kern/printf.c \
-			kern/trap.c \
-			kern/trapentry.S \
-			kern/sched.c \
-			kern/syscall.c \
-			kern/kdebug.c \
-			kern/file_manager.c \
-			kern/semaphore_manager.c \
-			kern/shared_memory_manager.c \
-			kern/kheap.c \
-			kern/test_kheap.c \
-			kern/utilities.c \
-			kern/priority_manager.c \
-			kern/test_priority.c \
+			kern/cons/console.c \
+			kern/cons/printf.c \
+			kern/cmd/command_prompt.c \
+			kern/cmd/commands.c  \
+			kern/disk/pagefile_manager.c \
+			kern/cpu/kclock.c \
+			kern/cpu/sched_helpers.c \
+			kern/cpu/sched.c \
+			kern/cpu/picirq.c \
+			kern/mem/boot_memory_manager.c \
+			kern/mem/memory_manager.c \
+			kern/mem/shared_memory_manager.c \
+			kern/mem/kheap.c \
+			kern/mem/paging_helpers.c \
+			kern/mem/working_set_manager.c \
+			kern/mem/chunk_operations.c \
+			kern/proc/user_environment.c \
+			kern/proc/priority_manager.c \
+			kern/proc/user_programs.c  \
+			kern/trap/trap.c \
+			kern/trap/trapentry.S \
+			kern/trap/syscall.c \
+			kern/trap/kdebug.c \
+			kern/trap/fault_handler.c  \
+			kern/conc/semaphore_manager.c \
+			kern/tests/tst_handler.c \
+			kern/tests/test_dynamic_allocator.c \
+			kern/tests/test_working_set.c \
+			kern/tests/test_commands.c \
+			kern/tests/test_priority.c \
+			kern/tests/test_kheap.c \
+			kern/tests/utilities.c \
 			lib/printfmt.c \
 			lib/readline.c \
 			lib/string.c \
-			lib/disk.c
+			lib/disk.c \
+			lib/dynamic_allocator.c \
+
+
+
 
 # Only build files if they exist.
 KERN_SRCFILES := $(wildcard $(KERN_SRCFILES))
