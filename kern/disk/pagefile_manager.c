@@ -15,54 +15,49 @@
 #include "../mem/kheap.h"
 #include "../mem/memory_manager.h"
 
-int __pf_write_env_table( struct Env* ptr_env, uint32 virtual_address, uint32* tableKVirtualAddress);
-int __pf_read_env_table(struct Env* ptr_env, uint32 virtual_address, uint32* tableKVirtualAddress);
-void __pf_remove_env_all_tables(struct Env* ptr_env);
-void __pf_remove_env_table(struct Env* ptr_env, uint32 virtual_address);
+int __pf_write_env_table(struct Env *ptr_env, uint32 virtual_address, uint32 *tableKVirtualAddress);
+int __pf_read_env_table(struct Env *ptr_env, uint32 virtual_address, uint32 *tableKVirtualAddress);
+void __pf_remove_env_all_tables(struct Env *ptr_env);
+void __pf_remove_env_table(struct Env *ptr_env, uint32 virtual_address);
 
-
-int read_disk_page(uint32 dfn, void* va)
+int read_disk_page(uint32 dfn, void *va)
 {
-	uint32 df_start_sector = PAGE_FILE_START_SECTOR+dfn*SECTOR_PER_PAGE;
+	uint32 df_start_sector = PAGE_FILE_START_SECTOR + dfn * SECTOR_PER_PAGE;
 
-	//LOG_STATMENT( cprintf("reading from disk to mem addr %x at sector %d\n",va,df_start_sector);  );
-	int success = ide_read(df_start_sector, (void*)va, SECTOR_PER_PAGE);
-	//LOG_STATMENT( if(success==0) {cprintf("read from disk successuflly.\n");} else {cprintf("read from disk failed !!\n");} );
+	// LOG_STATMENT( cprintf("reading from disk to mem addr %x at sector %d\n",va,df_start_sector);  );
+	int success = ide_read(df_start_sector, (void *)va, SECTOR_PER_PAGE);
+	// LOG_STATMENT( if(success==0) {cprintf("read from disk successuflly.\n");} else {cprintf("read from disk failed !!\n");} );
 
 	return success;
 }
 
-
-int write_disk_page(uint32 dfn, void* va)
+int write_disk_page(uint32 dfn, void *va)
 {
-	//write disk at wanted frame
-	uint32 df_start_sector = PAGE_FILE_START_SECTOR+dfn*SECTOR_PER_PAGE;
+	// write disk at wanted frame
+	uint32 df_start_sector = PAGE_FILE_START_SECTOR + dfn * SECTOR_PER_PAGE;
 
-	//LOG_STATMENT( cprintf(">>> writing to disk from mem addr %x at sector %d\n",va,df_start_sector);  );
-	int success = ide_write(df_start_sector, (void*)va, SECTOR_PER_PAGE);
-	//LOG_STATMENT( if(success==0) {cprintf(">>> written to disk successfully.\n");} else {cprintf(">>> written to disk failed !!\n");} );
+	// LOG_STATMENT( cprintf(">>> writing to disk from mem addr %x at sector %d\n",va,df_start_sector);  );
+	int success = ide_write(df_start_sector, (void *)va, SECTOR_PER_PAGE);
+	// LOG_STATMENT( if(success==0) {cprintf(">>> written to disk successfully.\n");} else {cprintf(">>> written to disk failed !!\n");} );
 
-	if(success != 0)
+	if (success != 0)
 		panic("Error writing on disk\n");
 	return success;
 }
 
 ///========================== PAGE FILE MANAGMENT ==============================
 
-uint32* ptr_disk_page_directory;
+uint32 *ptr_disk_page_directory;
 
-struct FrameInfo* disk_frames_info;
+struct FrameInfo *disk_frames_info;
 struct FrameInfo_List disk_free_frame_list;
 
 void initialize_disk_page_file();
 
-int read_disk_page(uint32 dfn, void* va);
-int write_disk_page(uint32 dfn, void* va);
+int read_disk_page(uint32 dfn, void *va);
+int write_disk_page(uint32 dfn, void *va);
 
-int get_disk_page_directory(struct Env* ptr_env, uint32** ptr_disk_page_directory);
-
-
-
+int get_disk_page_directory(struct Env *ptr_env, uint32 **ptr_disk_page_directory);
 
 // --------------------------------------------------------------
 // Tracking of physical frames.
@@ -80,12 +75,12 @@ void initialize_disk_page_file()
 	int i;
 	LIST_INIT(&disk_free_frame_list);
 
-	//LOG_STATMENT(cprintf("PAGES_PER_FILE = %d, PAGE_FILE_START_SECTOR = %d\n",PAGES_PER_FILE,PAGE_FILE_START_SECTOR););
+	// LOG_STATMENT(cprintf("PAGES_PER_FILE = %d, PAGE_FILE_START_SECTOR = %d\n",PAGES_PER_FILE,PAGE_FILE_START_SECTOR););
 	for (i = 1; i < PAGES_PER_FILE; i++)
 	{
 		initialize_frame_info(&(disk_frames_info[i]));
 
-		//disk_frames_info[i].references = 0;
+		// disk_frames_info[i].references = 0;
 		LIST_INSERT_HEAD(&disk_free_frame_list, &disk_frames_info[i]);
 	}
 }
@@ -114,7 +109,7 @@ int allocate_disk_frame(uint32 *dfn)
 {
 	// Fill this function in
 	struct FrameInfo *ptr_frame_info = LIST_FIRST(&disk_free_frame_list);
-	if(ptr_frame_info == NULL)
+	if (ptr_frame_info == NULL)
 		return E_NO_PAGE_FILE_SPACE;
 
 	LIST_REMOVE(&disk_free_frame_list, ptr_frame_info);
@@ -126,10 +121,11 @@ int allocate_disk_frame(uint32 *dfn)
 //
 // Return a frame to the disk_free_frame_list.
 //
-inline void free_disk_frame(uint32 dfn)
+void free_disk_frame(uint32 dfn)
 {
 	// Fill this function in
-	if(dfn == 0) return;
+	if (dfn == 0)
+		return;
 	LIST_INSERT_HEAD(&disk_free_frame_list, &disk_frames_info[dfn]);
 }
 
@@ -137,70 +133,69 @@ int get_disk_page_table(uint32 *ptr_disk_page_directory, const uint32 virtual_ad
 {
 	// Fill this function in
 	uint32 disk_page_directory_entry = ptr_disk_page_directory[PDX(virtual_address)];
-	if(USE_KHEAP && !CHECK_IF_KERNEL_ADDRESS(virtual_address))
+	if (USE_KHEAP && !CHECK_IF_KERNEL_ADDRESS(virtual_address))
 	{
-		*ptr_disk_page_table = (uint32*)kheap_virtual_address(EXTRACT_ADDRESS(disk_page_directory_entry));
+		*ptr_disk_page_table = (uint32 *)kheap_virtual_address(EXTRACT_ADDRESS(disk_page_directory_entry));
 	}
 	else
 	{
-		*ptr_disk_page_table = STATIC_KERNEL_VIRTUAL_ADDRESS(EXTRACT_ADDRESS(disk_page_directory_entry)) ;
+		*ptr_disk_page_table = STATIC_KERNEL_VIRTUAL_ADDRESS(EXTRACT_ADDRESS(disk_page_directory_entry));
 	}
 
 	if (disk_page_directory_entry == 0)
 	{
-		//LOG_STATMENT(cprintf("get_disk_page_table: disk directory at %x",ptr_disk_page_directory));
-		//LOG_STATMENT(cprintf("get_disk_page_table: page table not found "));
+		// LOG_STATMENT(cprintf("get_disk_page_table: disk directory at %x",ptr_disk_page_directory));
+		// LOG_STATMENT(cprintf("get_disk_page_table: page table not found "));
 		if (create)
 		{
 
 #if USE_KHEAP
 			{
-				*ptr_disk_page_table = (uint32*)kmalloc(PAGE_SIZE);
-				if(*ptr_disk_page_table == NULL)
+				*ptr_disk_page_table = (uint32 *)kmalloc(PAGE_SIZE);
+				if (*ptr_disk_page_table == NULL)
 				{
 					return E_NO_VM;
 				}
 				ptr_disk_page_directory[PDX(virtual_address)] = CONSTRUCT_ENTRY(
-						kheap_physical_address((unsigned int)*ptr_disk_page_table)
-						,PERM_PRESENT);
+					kheap_physical_address((unsigned int)*ptr_disk_page_table), PERM_PRESENT);
 			}
 #else
 			{
-				struct FrameInfo* ptr_frame_info;
-				allocate_frame(&ptr_frame_info) ;
+				struct FrameInfo *ptr_frame_info;
+				allocate_frame(&ptr_frame_info);
 
-				//LOG_STATMENT(cprintf("created table"));
+				// LOG_STATMENT(cprintf("created table"));
 				uint32 phys_page_table = to_physical_address(ptr_frame_info);
-				*ptr_disk_page_table = STATIC_KERNEL_VIRTUAL_ADDRESS(phys_page_table) ;
+				*ptr_disk_page_table = STATIC_KERNEL_VIRTUAL_ADDRESS(phys_page_table);
 				ptr_frame_info->references = 1;
-				ptr_disk_page_directory[PDX(virtual_address)] = CONSTRUCT_ENTRY(phys_page_table,PERM_PRESENT);
+				ptr_disk_page_directory[PDX(virtual_address)] = CONSTRUCT_ENTRY(phys_page_table, PERM_PRESENT);
 			}
 #endif
-			//initialize new page table by 0's
-			memset(*ptr_disk_page_table , 0, PAGE_SIZE);
+			// initialize new page table by 0's
+			memset(*ptr_disk_page_table, 0, PAGE_SIZE);
 
-			//LOG_STATMENT(cprintf("get_disk_page_table: disk directory entry # %d (VA = %x) is %x ",PDX(virtual_address),
-			//virtual_address, ptr_disk_page_directory[PDX(virtual_address)]));
+			// LOG_STATMENT(cprintf("get_disk_page_table: disk directory entry # %d (VA = %x) is %x ",PDX(virtual_address),
+			// virtual_address, ptr_disk_page_directory[PDX(virtual_address)]));
 		}
 		else
 		{
-			//LOG_STATMENT(cprintf("NOT creating table ..."));
+			// LOG_STATMENT(cprintf("NOT creating table ..."));
 			*ptr_disk_page_table = 0;
 			return 0;
 		}
 	}
-	//LOG_STATMENT(cprintf("found table at %x", *ptr_disk_page_table));
+	// LOG_STATMENT(cprintf("found table at %x", *ptr_disk_page_table));
 	return 0;
 }
 
-int pf_add_empty_env_page( struct Env* ptr_env, uint32 virtual_address, uint8 initializeByZero)
+int pf_add_empty_env_page(struct Env *ptr_env, uint32 virtual_address, uint8 initializeByZero)
 {
-	//2016: FIX:
+	// 2016: FIX:
 	if (initializeByZero)
 	{
-		//2020
+		// 2020
 		if (virtual_address > USTACKBOTTOM && virtual_address < USTACKTOP - ptr_env->initNumStackPages * PAGE_SIZE)
-			ptr_env->nNewPageAdded++ ;
+			ptr_env->nNewPageAdded++;
 		//======================
 		return pf_add_env_page(ptr_env, virtual_address, ptr_zero_page);
 	}
@@ -208,112 +203,113 @@ int pf_add_empty_env_page( struct Env* ptr_env, uint32 virtual_address, uint8 in
 	uint32 *ptr_disk_page_table;
 	assert((uint32)virtual_address < KERNEL_BASE);
 
-	get_disk_page_directory(ptr_env, &(ptr_env->disk_env_pgdir)) ;
+	get_disk_page_directory(ptr_env, &(ptr_env->disk_env_pgdir));
 
-	get_disk_page_table(ptr_env->disk_env_pgdir,  virtual_address, 1, &ptr_disk_page_table) ;
+	get_disk_page_table(ptr_env->disk_env_pgdir, virtual_address, 1, &ptr_disk_page_table);
 
-	uint32 dfn=ptr_disk_page_table[PTX(virtual_address)];
-	if( dfn == 0)
+	uint32 dfn = ptr_disk_page_table[PTX(virtual_address)];
+	if (dfn == 0)
 	{
-		if( allocate_disk_frame(&dfn) == E_NO_PAGE_FILE_SPACE) return E_NO_PAGE_FILE_SPACE;
+		if (allocate_disk_frame(&dfn) == E_NO_PAGE_FILE_SPACE)
+			return E_NO_PAGE_FILE_SPACE;
 		ptr_disk_page_table[PTX(virtual_address)] = dfn;
 	}
 
 	return 0;
-
 }
 
-int pf_add_env_page( struct Env* ptr_env, uint32 virtual_address, void* dataSrc)
+int pf_add_env_page(struct Env *ptr_env, uint32 virtual_address, void *dataSrc)
 {
-	//LOG_STRING("========================== create_env_page");
+	// LOG_STRING("========================== create_env_page");
 	uint32 *ptr_disk_page_table;
 	assert((uint32)virtual_address < KERNEL_BASE);
 
-	get_disk_page_directory(ptr_env, &(ptr_env->disk_env_pgdir)) ;
+	get_disk_page_directory(ptr_env, &(ptr_env->disk_env_pgdir));
 
-	get_disk_page_table(ptr_env->disk_env_pgdir,  virtual_address, 1, &ptr_disk_page_table) ;
+	get_disk_page_table(ptr_env->disk_env_pgdir, virtual_address, 1, &ptr_disk_page_table);
 
-	uint32 dfn=ptr_disk_page_table[PTX(virtual_address)];
-	if( dfn == 0)
+	uint32 dfn = ptr_disk_page_table[PTX(virtual_address)];
+	if (dfn == 0)
 	{
-		if( allocate_disk_frame(&dfn) == E_NO_PAGE_FILE_SPACE) return E_NO_PAGE_FILE_SPACE;
+		if (allocate_disk_frame(&dfn) == E_NO_PAGE_FILE_SPACE)
+			return E_NO_PAGE_FILE_SPACE;
 		ptr_disk_page_table[PTX(virtual_address)] = dfn;
 	}
 
-	//TODOObsolete: we should here lcr3 with the env pgdir to make sure that dataSrc is not read mistakenly
-	// from another env directory
+	// TODOObsolete: we should here lcr3 with the env pgdir to make sure that dataSrc is not read mistakenly
+	//  from another env directory
 
-	//We ALWAYS call it with va above KERNEL_BASE (i.e. from kernel mapping)
+	// We ALWAYS call it with va above KERNEL_BASE (i.e. from kernel mapping)
 
 	//	uint32 oldDir = rcr3();
 	//	lcr3(K_PHYSICAL_ADDRESS(ptr_env->env_pgdir));
 	//	int ret = write_disk_page(dfn, (void*)dataSrc);
 	//	lcr3(oldDir);
 
-	int ret = write_disk_page(dfn, (void*)dataSrc);
+	int ret = write_disk_page(dfn, (void *)dataSrc);
 	return ret;
 }
 
-int pf_update_env_page(struct Env* ptr_env, uint32 virtual_address, struct FrameInfo* modified_page_frame_info)
+int pf_update_env_page(struct Env *ptr_env, uint32 virtual_address, struct FrameInfo *modified_page_frame_info)
 {
 	int ret;
 	uint32 *ptr_disk_page_table;
-	//ROUND DOWN it on 4 KB boundary in order to update the entire page starting from its first address.
-	//virtual_address = ROUNDDOWN(virtual_address, PAGE_SIZE);
+	// ROUND DOWN it on 4 KB boundary in order to update the entire page starting from its first address.
+	// virtual_address = ROUNDDOWN(virtual_address, PAGE_SIZE);
 
 	assert((uint32)virtual_address < KERNEL_BASE);
-	//char c = *((char*)virtual_address);
-	//Get/Create the directory table
-	get_disk_page_directory(ptr_env, &(ptr_env->disk_env_pgdir)) ;
+	// char c = *((char*)virtual_address);
+	// Get/Create the directory table
+	get_disk_page_directory(ptr_env, &(ptr_env->disk_env_pgdir));
 
 	get_disk_page_table(ptr_env->disk_env_pgdir, virtual_address, 0, &ptr_disk_page_table);
 
-	//2022
-	if(ptr_disk_page_table == NULL || (ptr_disk_page_table != NULL && ptr_disk_page_table[PTX(virtual_address)]== 0))
+	// 2022
+	if (ptr_disk_page_table == NULL || (ptr_disk_page_table != NULL && ptr_disk_page_table[PTX(virtual_address)] == 0))
 	{
 
-		uint32 VA = (uint32)virtual_address ;
+		uint32 VA = (uint32)virtual_address;
 		if ((VA >= USER_HEAP_START && VA < USER_HEAP_MAX) || (VA >= USTACKBOTTOM && VA < USTACKTOP))
 		{
-		/*2023*/ //EL7 :)
-		/* REMOVE THIS CONDITION SINCE THE GIVEN virtual_address MIGHT HAVE PRESENT = 0
-		 * IN CASE OF LRU LIST APPROX (AS IT'S REMOVED FROM THE 2ND LIST WHICH ALREADY
-		 * HAS PRESENT = 0. THIS LEAD TO THROUGH FAULT WHEN ATTEMPT TO ADD A PAGE TO DISK
-		 * WITH dataSrc NOT MAPPED!
-		 */
-//			uint32 *ptr_table ;
-//			struct FrameInfo* ptr_fi = get_frame_info(ptr_env->env_page_directory, virtual_address, &ptr_table);
-//			cprintf("pf_update: 1.3\n");
-//
-//			//if VA already mapped on the same modified_page_frame_info, then write it directly from the VA
-//			if (ptr_fi == modified_page_frame_info)
-//			{
-//				cprintf("pf_update: 1.3.1\n");
-//
-//				ret = pf_add_env_page(ptr_env, VA, (void*)virtual_address) ;
-//				cprintf("pf_update: 1.3.2\n");
-//
-//				if (ret == E_NO_PAGE_FILE_SPACE)
-//				{
-//					panic("pf_update_env_page: page file out of space!") ;
-//				}
-//				//cprintf("[%s] adding page with content\n",ptr_env->prog_name);
-//
-//				ptr_env->nNewPageAdded++ ;
-//				return ret ;
-//			}
-//			//Else, just add a new empty page to the page file, then update it with the given modified_page_frame_info in the below code
-//			else
+			/*2023*/ // EL7 :)
+			/* REMOVE THIS CONDITION SINCE THE GIVEN virtual_address MIGHT HAVE PRESENT = 0
+			 * IN CASE OF LRU LIST APPROX (AS IT'S REMOVED FROM THE 2ND LIST WHICH ALREADY
+			 * HAS PRESENT = 0. THIS LEAD TO THROUGH FAULT WHEN ATTEMPT TO ADD A PAGE TO DISK
+			 * WITH dataSrc NOT MAPPED!
+			 */
+			//			uint32 *ptr_table ;
+			//			struct FrameInfo* ptr_fi = get_frame_info(ptr_env->env_page_directory, virtual_address, &ptr_table);
+			//			cprintf("pf_update: 1.3\n");
+			//
+			//			//if VA already mapped on the same modified_page_frame_info, then write it directly from the VA
+			//			if (ptr_fi == modified_page_frame_info)
+			//			{
+			//				cprintf("pf_update: 1.3.1\n");
+			//
+			//				ret = pf_add_env_page(ptr_env, VA, (void*)virtual_address) ;
+			//				cprintf("pf_update: 1.3.2\n");
+			//
+			//				if (ret == E_NO_PAGE_FILE_SPACE)
+			//				{
+			//					panic("pf_update_env_page: page file out of space!") ;
+			//				}
+			//				//cprintf("[%s] adding page with content\n",ptr_env->prog_name);
+			//
+			//				ptr_env->nNewPageAdded++ ;
+			//				return ret ;
+			//			}
+			//			//Else, just add a new empty page to the page file, then update it with the given modified_page_frame_info in the below code
+			//			else
 			{
 				ret = pf_add_empty_env_page(ptr_env, VA, 0);
 
 				if (ret == E_NO_PAGE_FILE_SPACE)
 				{
-					panic("pf_update_env_page: attempt to add a new page, but page file out of space!") ;
+					panic("pf_update_env_page: attempt to add a new page, but page file out of space!");
 				}
-				//cprintf("[%s] adding EMPTY page with content\n",ptr_env->prog_name);
+				// cprintf("[%s] adding EMPTY page with content\n",ptr_env->prog_name);
 
-				ptr_env->nNewPageAdded++ ;
+				ptr_env->nNewPageAdded++;
 			}
 		}
 		else
@@ -321,20 +317,19 @@ int pf_update_env_page(struct Env* ptr_env, uint32 virtual_address, struct Frame
 			panic("pf_update_env_page: Invalid Access - Attempt to add a new page to page file that's outside the USER HEAP and USER STACK!");
 		}
 	}
-	//2022 END========================================
-
+	// 2022 END========================================
 
 	get_disk_page_table(ptr_env->disk_env_pgdir, virtual_address, 0, &ptr_disk_page_table);
-	uint32 dfn=ptr_disk_page_table[PTX(virtual_address)];
+	uint32 dfn = ptr_disk_page_table[PTX(virtual_address)];
 
 #if USE_KHEAP
 	{
-		//FIX: we should implement a better solution for this, but for now
+		// FIX: we should implement a better solution for this, but for now
 		//		we are using an unused VA in the invalid area of kernel at 0xef800000 (the current USER_LIMIT)
 		//		to do temp initialization of a frame.
 		map_frame(ptr_env->env_page_directory, modified_page_frame_info, USER_LIMIT, 0);
 
-		ret = write_disk_page(dfn, (void*)ROUNDDOWN(USER_LIMIT, PAGE_SIZE));
+		ret = write_disk_page(dfn, (void *)ROUNDDOWN(USER_LIMIT, PAGE_SIZE));
 
 		// TEMPORARILY increase the references to prevent unmap_frame from removing the frame
 		modified_page_frame_info->references += 1;
@@ -342,16 +337,16 @@ int pf_update_env_page(struct Env* ptr_env, uint32 virtual_address, struct Frame
 		// Return it to its original status
 		modified_page_frame_info->references -= 1;
 
-		//cprintf("[%s] updating page\n",ptr_env->prog_name);
+		// cprintf("[%s] updating page\n",ptr_env->prog_name);
 	}
 #else
 	{
 		ret = write_disk_page(dfn, STATIC_KERNEL_VIRTUAL_ADDRESS(to_physical_address(modified_page_frame_info)));
-		//cprintf("[%s] finished updating page\n",ptr_env->prog_name);
+		// cprintf("[%s] finished updating page\n",ptr_env->prog_name);
 	}
 #endif
-	//2020
-	ptr_env->nPageOut++ ;
+	// 2020
+	ptr_env->nPageOut++;
 	//======================
 
 	return ret;
@@ -374,60 +369,65 @@ int pf_special_update_env_modified_page(struct Env* ptr_env, uint32 virtual_addr
 	return write_disk_page(dfn, STATIC_KERNEL_VIRTUAL_ADDRESS(to_physical_address(page_modified_frame_info)));
 }
  */
-int pf_read_env_page(struct Env* ptr_env, void* virtual_address)
+int pf_read_env_page(struct Env *ptr_env, void *virtual_address)
 {
 	uint32 *ptr_disk_page_table;
 
-	//ROUND DOWN it on 4 KB boundary in order to read the entire page starting from its first address.
+	// ROUND DOWN it on 4 KB boundary in order to read the entire page starting from its first address.
 	virtual_address = ROUNDDOWN(virtual_address, PAGE_SIZE);
 
-	if( ptr_env->disk_env_pgdir == 0) return E_PAGE_NOT_EXIST_IN_PF;
+	if (ptr_env->disk_env_pgdir == 0)
+		return E_PAGE_NOT_EXIST_IN_PF;
 
-	get_disk_page_table(ptr_env->disk_env_pgdir, (uint32) virtual_address, 0, &ptr_disk_page_table);
-	if(ptr_disk_page_table == 0) return E_PAGE_NOT_EXIST_IN_PF;
+	get_disk_page_table(ptr_env->disk_env_pgdir, (uint32)virtual_address, 0, &ptr_disk_page_table);
+	if (ptr_disk_page_table == 0)
+		return E_PAGE_NOT_EXIST_IN_PF;
 
-	uint32 dfn=ptr_disk_page_table[PTX(virtual_address)];
+	uint32 dfn = ptr_disk_page_table[PTX(virtual_address)];
 
-	if( dfn == 0) return E_PAGE_NOT_EXIST_IN_PF;
+	if (dfn == 0)
+		return E_PAGE_NOT_EXIST_IN_PF;
 
 	int disk_read_error = read_disk_page(dfn, virtual_address);
 
-	//reset modified bit to 0: because FOS copies the placed or replaced page from
-	//HD to memory, the page modified bit is set to 1, but we want the modified bit to be
-	// affected only by "user code" modifications, not our (FOS kernel) modifications
+	// reset modified bit to 0: because FOS copies the placed or replaced page from
+	// HD to memory, the page modified bit is set to 1, but we want the modified bit to be
+	//  affected only by "user code" modifications, not our (FOS kernel) modifications
 	pt_set_page_permissions(ptr_env->env_page_directory, (uint32)virtual_address, 0, PERM_MODIFIED);
 
-	//2020
-	ptr_env->nPageIn++ ;
+	// 2020
+	ptr_env->nPageIn++;
 	//======================
 
 	return disk_read_error;
 }
 
-void pf_remove_env_page(struct Env* ptr_env, uint32 virtual_address)
+void pf_remove_env_page(struct Env *ptr_env, uint32 virtual_address)
 {
-	//LOG_STRING("pf_remove_env_page: 0");
+	// LOG_STRING("pf_remove_env_page: 0");
 	uint32 *ptr_disk_page_table;
 
-	//LOG_STATMENT(cprintf("ptr_env = %x",ptr_env));
-	if( ptr_env->disk_env_pgdir == 0) return;
+	// LOG_STATMENT(cprintf("ptr_env = %x",ptr_env));
+	if (ptr_env->disk_env_pgdir == 0)
+		return;
 
-	//LOG_STRING("pf_remove_env_page: 1");
+	// LOG_STRING("pf_remove_env_page: 1");
 	get_disk_page_table(ptr_env->disk_env_pgdir, virtual_address, 0, &ptr_disk_page_table);
-	if(ptr_disk_page_table == 0) return;
+	if (ptr_disk_page_table == 0)
+		return;
 
-	//LOG_STRING("pf_remove_env_page: 2");
-	uint32 dfn=ptr_disk_page_table[PTX(virtual_address)];
+	// LOG_STRING("pf_remove_env_page: 2");
+	uint32 dfn = ptr_disk_page_table[PTX(virtual_address)];
 	ptr_disk_page_table[PTX(virtual_address)] = 0;
 	free_disk_frame(dfn);
-	//LOG_STRING("pf_remove_env_page: 3");
+	// LOG_STRING("pf_remove_env_page: 3");
 }
 
-void pf_free_env(struct Env* ptr_env)
+void pf_free_env(struct Env *ptr_env)
 {
 	uint32 pdeno;
 
-	for (pdeno = 0; pdeno < PDX(USER_TOP) ; pdeno++)
+	for (pdeno = 0; pdeno < PDX(USER_TOP); pdeno++)
 	{
 		// only look at mapped page tables
 		if (!(ptr_env->disk_env_pgdir[pdeno] & PERM_PRESENT))
@@ -438,11 +438,11 @@ void pf_free_env(struct Env* ptr_env)
 		uint32 *pt;
 #if USE_KHEAP
 		{
-			pt = (uint32*) kheap_virtual_address(pa);
+			pt = (uint32 *)kheap_virtual_address(pa);
 		}
 #else
 		{
-			pt = (uint32*) STATIC_KERNEL_VIRTUAL_ADDRESS(pa);
+			pt = (uint32 *)STATIC_KERNEL_VIRTUAL_ADDRESS(pa);
 		}
 #endif
 		// unmap all PTEs in this page table
@@ -450,7 +450,7 @@ void pf_free_env(struct Env* ptr_env)
 		for (pteno = 0; pteno < 1024; pteno++)
 		{
 			// remove the disk page from disk page table
-			uint32 dfn=pt[pteno];
+			uint32 dfn = pt[pteno];
 			pt[pteno] = 0;
 			// and declare it free
 			free_disk_frame(dfn);
@@ -482,12 +482,10 @@ void pf_free_env(struct Env* ptr_env)
 	ptr_env->disk_env_pgdir = 0;
 	ptr_env->disk_env_pgdir_PA = 0;
 
-
 	// remove all tables and the disk table
 	if (ptr_env->disk_env_tabledir == 0)
 		return;
 	__pf_remove_env_all_tables(ptr_env);
-
 
 #if USE_KHEAP
 	{
@@ -500,20 +498,18 @@ void pf_free_env(struct Env* ptr_env)
 #endif
 	ptr_env->disk_env_tabledir = 0;
 	ptr_env->disk_env_tabledir_PA = 0;
-
 }
 
-
-int get_disk_page_directory(struct Env* ptr_env, uint32** ptr_disk_page_directory)
+int get_disk_page_directory(struct Env *ptr_env, uint32 **ptr_disk_page_directory)
 {
 	*ptr_disk_page_directory = ptr_env->disk_env_pgdir;
-	if(*ptr_disk_page_directory == 0)
+	if (*ptr_disk_page_directory == 0)
 	{
 		//	LOG_STATMENT(cprintf(">>>>>>>>>>>>>> disk directory not found, creating one ...\n"););
 #if USE_KHEAP
 		{
 			*ptr_disk_page_directory = kmalloc(PAGE_SIZE);
-			if(*ptr_disk_page_directory == NULL)
+			if (*ptr_disk_page_directory == NULL)
 			{
 				return E_NO_VM;
 			}
@@ -534,21 +530,21 @@ int get_disk_page_directory(struct Env* ptr_env, uint32** ptr_disk_page_director
 			ptr_env->disk_env_pgdir_PA = to_physical_address(p);
 		}
 #endif
-		memset(*ptr_disk_page_directory , 0, PAGE_SIZE);
+		memset(*ptr_disk_page_directory, 0, PAGE_SIZE);
 
 		//	LOG_STATMENT(cprintf(">>>>>>>>>>>>>> Disk directory created at %x", *ptr_disk_page_directory));
 	}
 	return 0;
 }
 
-int pf_calculate_allocated_pages(struct Env* ptr_env)
+int pf_calculate_allocated_pages(struct Env *ptr_env)
 {
 	uint32 *pt;
 	uint32 pdIndex;
 	uint32 pa;
-	uint32 counter=0;
+	uint32 counter = 0;
 
-	for (pdIndex = 0; pdIndex < PDX(USER_TOP) ; pdIndex++)
+	for (pdIndex = 0; pdIndex < PDX(USER_TOP); pdIndex++)
 	{
 		// only look at mapped page tables
 		if (!(ptr_env->disk_env_pgdir[pdIndex] & PERM_PRESENT))
@@ -558,11 +554,11 @@ int pf_calculate_allocated_pages(struct Env* ptr_env)
 		pa = EXTRACT_ADDRESS(ptr_env->disk_env_pgdir[pdIndex]);
 #if USE_KHEAP
 		{
-			pt = (uint32*) kheap_virtual_address(pa);
+			pt = (uint32 *)kheap_virtual_address(pa);
 		}
 #else
 		{
-			pt = (uint32*) STATIC_KERNEL_VIRTUAL_ADDRESS(pa);
+			pt = (uint32 *)STATIC_KERNEL_VIRTUAL_ADDRESS(pa);
 		}
 #endif
 
@@ -571,43 +567,41 @@ int pf_calculate_allocated_pages(struct Env* ptr_env)
 		for (ptIndex = 0; ptIndex < 1024; ptIndex++)
 		{
 			// remove the disk page from disk page table
-			uint32 dfn=pt[ptIndex];
-			if(dfn != 0)
-				counter ++;
+			uint32 dfn = pt[ptIndex];
+			if (dfn != 0)
+				counter++;
 		}
 	}
 
 	return counter;
 }
 
-//2016:
-//calculate the disk free frames from the disk free frame list
+// 2016:
+// calculate the disk free frames from the disk free frame list
 int pf_calculate_free_frames()
 {
 	struct FrameInfo *ptr;
-	uint32 totalFreeDiskFrames = 0 ;
+	uint32 totalFreeDiskFrames = 0;
 
 	LIST_FOREACH(ptr, &disk_free_frame_list)
 	{
-		totalFreeDiskFrames++ ;
+		totalFreeDiskFrames++;
 	}
 	return totalFreeDiskFrames;
 }
 ///========================== END OF PAGE FILE MANAGMENT =============================
 
-
-
 /*========================== TABLE FILE MANAGMENT ==============================*/
-int get_disk_table_directory(struct Env* ptr_env, uint32** ptr_disk_table_directory)
+int get_disk_table_directory(struct Env *ptr_env, uint32 **ptr_disk_table_directory)
 {
 	*ptr_disk_table_directory = ptr_env->disk_env_tabledir;
-	if(*ptr_disk_table_directory == 0)
+	if (*ptr_disk_table_directory == 0)
 	{
 		//	LOG_STATMENT(cprintf(">>>>>>>>>>>>>> disk directory not found, creating one ...\n"););
 #if USE_KHEAP
 		{
 			*ptr_disk_table_directory = kmalloc(PAGE_SIZE);
-			if(*ptr_disk_table_directory == NULL)
+			if (*ptr_disk_table_directory == NULL)
 			{
 				return E_NO_VM;
 			}
@@ -628,100 +622,103 @@ int get_disk_table_directory(struct Env* ptr_env, uint32** ptr_disk_table_direct
 			ptr_env->disk_env_tabledir_PA = to_physical_address(p);
 		}
 #endif
-		memset(*ptr_disk_table_directory , 0, PAGE_SIZE);
+		memset(*ptr_disk_table_directory, 0, PAGE_SIZE);
 
 		//	LOG_STATMENT(cprintf(">>>>>>>>>>>>>> Disk directory created at %x", *ptr_disk_page_directory));
 	}
 	return 0;
 }
 
-int __pf_write_env_table( struct Env* ptr_env, uint32 virtual_address, uint32* tableKVirtualAddress)
+int __pf_write_env_table(struct Env *ptr_env, uint32 virtual_address, uint32 *tableKVirtualAddress)
 {
-	//LOG_STRING("========================== create_env_page");
+	// LOG_STRING("========================== create_env_page");
 	assert((uint32)virtual_address < KERNEL_BASE);
 
-	get_disk_table_directory(ptr_env, &(ptr_env->disk_env_tabledir)) ;
+	get_disk_table_directory(ptr_env, &(ptr_env->disk_env_tabledir));
 
-	uint32 dfn=ptr_env->disk_env_tabledir[PDX(virtual_address)];
-	if( dfn == 0)
+	uint32 dfn = ptr_env->disk_env_tabledir[PDX(virtual_address)];
+	if (dfn == 0)
 	{
-		if( allocate_disk_frame(&dfn) == E_NO_PAGE_FILE_SPACE) return E_NO_PAGE_FILE_SPACE;
+		if (allocate_disk_frame(&dfn) == E_NO_PAGE_FILE_SPACE)
+			return E_NO_PAGE_FILE_SPACE;
 		ptr_env->disk_env_tabledir[PDX(virtual_address)] = dfn;
 	}
 
-
-	//TODOObsolete: we should here lcr3 with the env pgdir to make sure that tableKVirtualAddress is not read mistakenly
-	// from another env directory
+	// TODOObsolete: we should here lcr3 with the env pgdir to make sure that tableKVirtualAddress is not read mistakenly
+	//  from another env directory
 	//	uint32 oldDir = rcr3();
 	//	lcr3(K_PHYSICAL_ADDRESS(ptr_env->env_pgdir));
 	//	int ret = write_disk_page(dfn, (void*)tableKVirtualAddress);
 	//	lcr3(oldDir);
 
-	//We already read it from the KERNEL mapping instead of the USER mapping
+	// We already read it from the KERNEL mapping instead of the USER mapping
 
-	//cprintf("[%s] writing table\n",ptr_env->prog_name);
-	int ret = write_disk_page(dfn, (void*)tableKVirtualAddress);
-	//cprintf("[%s] finished writing table\n",ptr_env->prog_name);
+	// cprintf("[%s] writing table\n",ptr_env->prog_name);
+	int ret = write_disk_page(dfn, (void *)tableKVirtualAddress);
+	// cprintf("[%s] finished writing table\n",ptr_env->prog_name);
 	return ret;
 }
 
-int __pf_read_env_table(struct Env* ptr_env, uint32 virtual_address, uint32* tableKVirtualAddress)
+int __pf_read_env_table(struct Env *ptr_env, uint32 virtual_address, uint32 *tableKVirtualAddress)
 {
-	if( ptr_env->disk_env_tabledir == 0) return E_TABLE_NOT_EXIST_IN_PF;
+	if (ptr_env->disk_env_tabledir == 0)
+		return E_TABLE_NOT_EXIST_IN_PF;
 
-	uint32 dfn=ptr_env->disk_env_tabledir[PDX(virtual_address)];
+	uint32 dfn = ptr_env->disk_env_tabledir[PDX(virtual_address)];
 
-	if( dfn == 0) return E_TABLE_NOT_EXIST_IN_PF;
+	if (dfn == 0)
+		return E_TABLE_NOT_EXIST_IN_PF;
 
 	int disk_read_error = read_disk_page(dfn, tableKVirtualAddress);
 
 	return disk_read_error;
 }
 
-void __pf_remove_env_all_tables(struct Env* ptr_env)
+void __pf_remove_env_all_tables(struct Env *ptr_env)
 {
-	//LOG_STRING("pf_remove_env_page: 0");
+	// LOG_STRING("pf_remove_env_page: 0");
 
-	//LOG_STATMENT(cprintf("ptr_env = %x",ptr_env));
-	if( ptr_env->disk_env_tabledir == 0) return;
+	// LOG_STATMENT(cprintf("ptr_env = %x",ptr_env));
+	if (ptr_env->disk_env_tabledir == 0)
+		return;
 
 	uint32 pdeno;
-	for (pdeno = 0; pdeno < PDX(USER_TOP) ; pdeno++)
+	for (pdeno = 0; pdeno < PDX(USER_TOP); pdeno++)
 	{
-		uint32 dfn=ptr_env->disk_env_tabledir[pdeno];
+		uint32 dfn = ptr_env->disk_env_tabledir[pdeno];
 		ptr_env->disk_env_tabledir[pdeno] = 0;
 		free_disk_frame(dfn);
 	}
-	//LOG_STRING("pf_remove_env_page: 3");
+	// LOG_STRING("pf_remove_env_page: 3");
 }
 
-void __pf_remove_env_table(struct Env* ptr_env, uint32 virtual_address)
+void __pf_remove_env_table(struct Env *ptr_env, uint32 virtual_address)
 {
 	if (virtual_address == 0)
 		cprintf("REMOVING table 0 from page file\n");
-	if( ptr_env->disk_env_tabledir == 0) return;
+	if (ptr_env->disk_env_tabledir == 0)
+		return;
 
-	uint32 dfn=ptr_env->disk_env_tabledir[PDX(virtual_address)];
+	uint32 dfn = ptr_env->disk_env_tabledir[PDX(virtual_address)];
 	ptr_env->disk_env_tabledir[PDX(virtual_address)] = 0;
 	free_disk_frame(dfn);
 }
 ///========================== END OF TABLE FILE MANAGMENT =============================
 
-
 void test_disk_01(void *virtual_address)
 {
 	LOG_STATMENT(cprintf("doing tests for ide_write()\n"));
-	int i=90157;
-	for(;i<140000;i += 500)
+	int i = 90157;
+	for (; i < 140000; i += 500)
 	{
-		if(ide_write(i,(void *)virtual_address,8) != 0)
+		if (ide_write(i, (void *)virtual_address, 8) != 0)
 		{
-			LOG_STATMENT(cprintf("FAILURE to write sector %d\n",i););
+			LOG_STATMENT(cprintf("FAILURE to write sector %d\n", i););
 			break;
 		}
 		else
 		{
-			//LOG_STATMENT(cprintf("written at sector %d\n",i););
+			// LOG_STATMENT(cprintf("written at sector %d\n",i););
 		}
 	}
 	LOG_STATMENT(cprintf("ide_write() test done\n"););
